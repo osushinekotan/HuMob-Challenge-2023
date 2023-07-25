@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "tempura"
+name = "humob-challenge-2023"
 version = "0.1.0"
-description = "python project template"
+description = ""
 authors = ["osushinekotan"]
 
 [tool.poetry.dependencies]
