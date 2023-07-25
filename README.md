@@ -1,8 +1,3 @@
-# tempura
-python project template
+# HuMob Challenge 2023
 
-## features
-- vscode (dev-containers)
-- package manager : poetry
-- liner : ruff
-- formatter : black, ruff
+- url : https://connection.mit.edu/humob-challenge-2023
