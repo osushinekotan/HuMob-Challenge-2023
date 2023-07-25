@@ -162,3 +162,7 @@ cython_debug/
 # notebooks
 notebooks/*
 !notebooks/.gitkeep
+
+# resources
+resources/*
+!resources/.gitkeep
