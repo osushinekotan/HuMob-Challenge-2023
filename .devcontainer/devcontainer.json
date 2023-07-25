@@ -1,0 +1,57 @@
+{
+  "name": "workspace",
+  "dockerComposeFile": ["../compose.yml"],
+  "service": "workspace",
+  "workspaceFolder": "/workspace",
+  "runServices": ["workspace"],
+  "containerEnv": {
+    "TZ": "Asia/Tokyo"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.renderWhitespace": "all",
+        "python.defaultInterpreterPath": ".venv/bin/python",
+        "python.formatting.provider": "none",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnSaveMode": "file",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": true,
+            "source.organizeImports.ruff": true
+          }
+        },
+
+        "python.testing.pytestEnabled": true,
+        "python.linting.mypyEnabled": true,
+        "[json][jsonc]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll": true
+          }
+        },
+        "[yaml]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll": true
+          }
+        }
+      },
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "ms-python.python",
+        "njpwerner.autodocstring",
+        "KevinRose.vsc-python-indent",
+        "charliermarsh.ruff",
+        "ms-python.black-formatter",
+        "mhutchie.git-graph",
+        "ms-python.mypy-type-checker",
+        "ms-toolsai.jupyter",
+        "janisdd.vscode-edit-csv"
+      ]
+    }
+  }
+}
