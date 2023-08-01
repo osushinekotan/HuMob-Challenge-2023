@@ -5,4 +5,4 @@
 
 
 ### [dash] Movement Uids Ober Time
-```poetry run python -m src.dash.viz_humod.py```
+```poetry run python -m src.dash.human_movement.py```
