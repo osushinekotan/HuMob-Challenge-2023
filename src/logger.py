@@ -6,7 +6,7 @@ from colorlog import ColoredFormatter
 
 
 class Logger:
-    def __init__(self, name, filename=None, level=logging.INFO, filemode="a"):
+    def __init__(self, name: str = "", filename=None, level=logging.INFO, filemode="a"):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
 
@@ -67,7 +67,7 @@ class Logger:
 
 # examples
 if __name__ == "__main__":
-    logger = Logger(__name__)
+    logger = Logger()
 
     logger.debug("This is a debug message.")
     logger.info("This is an info message.")
