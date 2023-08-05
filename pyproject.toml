@@ -19,6 +19,9 @@ jupyter = "^1.0.0"
 jupyterlab-code-formatter = "^2.2.1"
 jupyterlab = "^4.0.3"
 jupyterlab-tabnine = "^0.0.24"
+pytorch-pfn-extras = "^0.7.1"
+transformers = "^4.31.0"
+setuptools = "^68.0.0"
 
 
 [tool.poetry.group.dev.dependencies]
