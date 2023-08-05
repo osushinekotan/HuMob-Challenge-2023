@@ -1,12 +1,10 @@
 global:
   seed: 8823
   debug: False
-  name:
-    run: run000
-    fe: fe000
   resources: "/workspace/resources"
 
 fe:
+  out_dir: "001/features"
   overwrite: False
   dataset: "task2_dataset"
   extractors:
@@ -18,6 +16,7 @@ fe:
       }
 
 cv:
+  n_valid_uids: 100
   n_splits: 5
   valid_folds: [0, 1, 2]
 
