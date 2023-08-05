@@ -1,0 +1,101 @@
+global:
+  seed: 8823
+  debug: False
+  name:
+    run: run000
+    fe: fe000
+  resources: "/workspace/resources"
+
+fe:
+  overwrite: False
+  dataset: "task2_dataset"
+  extractors:
+    - {
+        type: GroupedDiffFeatureExtractor,
+        group_key: uid,
+        group_values: ["t", "d"],
+        intervals: [1, 2],
+      }
+
+cv:
+  n_splits: 5
+  valid_folds: [0, 1, 2]
+
+nn:
+  device: ???
+  max_epochs: 2
+  gradient_accumulation_steps: 4
+  fp16: False
+
+model:
+  type: CustomLSTMModelV1
+  input_size: ???
+  hidden_size: 2
+  num_layers: 1
+  output_size: ???
+
+dataset:
+  train:
+    type: TrainDataset
+    feature_seqs: ???
+    target_seqs: ???
+  valid:
+    type: TrainDataset
+    feature_seqs: ???
+    target_seqs: ???
+  test:
+    type: TestDataset
+    feature_seqs: ???
+
+dataloader:
+  collate_fn: PadSequenceCollateFn
+
+  train:
+    type: DataLoader
+    dataset: "@/dataset/train"
+    collate_fn:
+      type: "@/dataloader/collate_fn"
+      is_train_model: True
+    batch_size: 2
+    num_workers: 4
+    shuffle: True
+    pin_memory: True
+    drop_last: True
+
+  valid:
+    type: DataLoader
+    dataset: "@/dataset/valid"
+    collate_fn:
+      type: "@/dataloader/collate_fn"
+      is_train_model: True
+    batch_size: 2
+    num_workers: 4
+    shuffle: True
+    pin_memory: True
+    drop_last: True
+
+  test:
+    type: DataLoader
+    dataset: "@/dataset/test"
+    collate_fn:
+      type: "@/dataloader/collate_fn"
+      is_train_model: False
+    batch_size: 2
+    num_workers: 4
+    shuffle: False
+    pin_memory: True
+    drop_last: False
+
+optimizer:
+  type: AdamW
+  params: { type: method_call, obj: "@/model", method: parameters }
+  lr: 2.0e-4
+  weight_decay: 1.0e-2
+  eps: 1.0e-6
+  betas: [0.9, 0.999]
+
+scheduler:
+  type: get_cosine_schedule_with_warmup
+  optimizer: "@/optimizer"
+  num_warmup_steps: 0
+  num_training_steps: ???
