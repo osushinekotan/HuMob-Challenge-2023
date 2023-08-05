@@ -8,6 +8,7 @@ from colorlog import ColoredFormatter
 class Logger:
     def __init__(self, name: str = "", filename=None, level=logging.INFO, filemode="a"):
         self.logger = logging.getLogger(name)
+        self.logger.propagate = False
         self.logger.setLevel(level)
 
         # Define formatter
@@ -63,17 +64,3 @@ class Logger:
             end_time = time.time()
             elapsed_time = end_time - start_time
             self.info(f"end {target} ✨ - elapsed time: {elapsed_time:.2f} seconds ⏰")
-
-
-# examples
-if __name__ == "__main__":
-    logger = Logger()
-
-    logger.debug("This is a debug message.")
-    logger.info("This is an info message.")
-    logger.warning("This is a warning message.")
-    logger.error("This is an error message.")
-    logger.critical("This is a critical message.")
-
-    with logger.time_log("Some Task"):
-        time.sleep(2)
