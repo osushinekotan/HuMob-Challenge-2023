@@ -16,7 +16,7 @@ fe:
       }
 
 cv:
-  n_valid_uids: 100
+  n_valid_uids: 10
   n_splits: 5
   valid_folds: [0, 1, 2]
 

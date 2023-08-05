@@ -22,7 +22,7 @@ DEBUG = config["/global/debug"]
 
 
 class TaskDatset:
-    def __init__(self, config) -> None:
+    def __init__(self, config, overwrite=False) -> None:
         self.config = config
         self.dirpath = Path(config["/global/resources"]) / "input"
         self.dataset_name = config["/fe/dataset"]
@@ -30,9 +30,11 @@ class TaskDatset:
         self.raw_train_filepath = self.dirpath / f"{self.dataset_name}_raw_train.parquet"
         self.raw_test_filepath = self.dirpath / f"{self.dataset_name}_raw_test.parquet"
 
+        self.overwrite = overwrite
+
     @property
     def raw_train_data(self):
-        if self.raw_train_filepath.is_file():
+        if self.raw_train_filepath.is_file() and (not self.overwrite):
             return pd.read_parquet(self.raw_train_filepath)
 
         raw_train_df = self.raw_data.query("x != 999").reset_index(drop=True)
@@ -41,7 +43,7 @@ class TaskDatset:
 
     @property
     def raw_test_data(self):
-        if self.raw_test_filepath.is_file():
+        if self.raw_test_filepath.is_file() and (not self.overwrite):
             return pd.read_parquet(self.raw_test_filepath)
 
         raw_test_df = self.raw_data.query("x == 999")
@@ -118,11 +120,11 @@ def cache(out_dir: Path, overwrite: bool = False, no_cache: bool = False):
     return decorator
 
 
-def make_features(config, df):
+def make_features(config, df, overwrite=False):
     extractors = config["fe/extractors"]
     out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"]
 
-    @cache(out_dir=out_dir, overwrite=config["/fe/overwrite"])
+    @cache(out_dir=out_dir, overwrite=overwrite)
     def _extract(df, extractor):
         with logger.time_log(target=extractor.__class__.__name__):
             return extractor(df)
@@ -132,13 +134,14 @@ def make_features(config, df):
 
 
 class TrainValidDataset:
-    def __init__(self, config, uids):
+    def __init__(self, config, uids, overwrite=True):
         self.config = config
         out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"]
         self.train_filepath = out_dir / "train_feaures_df.pkl"
         self.valid_filepath = out_dir / "valid_features_df.pkl"
 
         self.uids = uids
+        self.overwrite = overwrite
 
     @cached_property
     def valid_uids(self):
@@ -150,7 +153,7 @@ class TrainValidDataset:
         return valid_uids
 
     def load_valid_data(self, df):
-        if self.valid_filepath.is_file():
+        if self.valid_filepath.is_file() and (not self.overwrite):
             return joblib.load(self.train_filepath)
 
         valid_df = df[df["uid"].isin(self.valid_uids)].reset_index(drop=True)
@@ -158,7 +161,7 @@ class TrainValidDataset:
         return valid_df
 
     def load_train_data(self, df):
-        if self.train_filepath.is_file():
+        if self.train_filepath.is_file() and (not self.overwrite):
             return joblib.load(self.train_filepath)
 
         train_df = df[~df["uid"].isin(self.valid_uids)].reset_index(drop=True)
@@ -167,7 +170,7 @@ class TrainValidDataset:
 
 
 # load data
-task_dataset = TaskDatset(config=config)
+task_dataset = TaskDatset(config=config, overwrite=True)
 raw_train_df = task_dataset.raw_train_data
 poi_df = task_dataset.poi_data
 
@@ -176,8 +179,8 @@ if DEBUG:
     raw_train_df = raw_train_df[raw_train_df["uid"].isin(user_ids)].reset_index(drop=True)
 
 # feature engineering
-train_df = make_features(config=config, df=raw_train_df)
-train_valid_dataset = TrainValidDataset(config=config, uids=train_df["uids"])
+train_df = make_features(config=config, df=raw_train_df, overwrite=True)
+train_valid_dataset = TrainValidDataset(config=config, uids=train_df["uid"], overwrite=True)
 valid_df = train_valid_dataset.load_valid_data(df=train_df)
 train_df = train_valid_dataset.load_train_data(df=train_df)
 
