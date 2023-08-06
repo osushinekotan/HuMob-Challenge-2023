@@ -24,3 +24,11 @@ class GroupedDiffFeatureExtractor:
             axis=1,
         )
         return out_df.add_prefix("f_").fillna(-1)
+
+
+class RawFeatureExtractor:
+    def __init__(self, use_columns) -> None:
+        self.use_columns = use_columns
+
+    def __call__(self, df):
+        return df[self.use_columns].add_prefix("f_")

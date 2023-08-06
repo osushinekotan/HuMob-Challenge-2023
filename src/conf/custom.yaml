@@ -14,10 +14,14 @@ fe:
         group_values: ["t", "d"],
         intervals: [1, 2],
       }
+    - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] }
 
 cv:
-  n_valid_uids: 10
-  n_splits: 5
+  strategy:
+    type: StratifiedGroupKFold
+    n_splits: 5
+    shuffle: True
+    random_state: "@/global/seed"
   valid_folds: [0, 1, 2]
 
 nn:

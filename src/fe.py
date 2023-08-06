@@ -135,6 +135,20 @@ def make_features(config, df, overwrite=False):
     return features_df
 
 
+def make_sequences(df: pd.DataFrame, group_key: str, group_values: list[str]):
+    grouped = df.groupby(group_key, sort=False)
+    sequences = [torch.tensor(group[group_values].to_numpy()) for _, group in grouped]
+    return sequences
+
+
+def add_fold(config, df):
+    df["fold"] = -1
+    cv = config["/cv/strategy"]
+    for i_fold, (tr_idx, va_idx) in enumerate(cv.split(X=df, y=df["fold"], groups=df["uid"])):
+        df.loc[va_idx, "fold"] = i_fold
+    return df
+
+
 # load data
 task_dataset = TaskDatset(config=config, overwrite=True)
 raw_train_df = task_dataset.raw_train_data
@@ -144,20 +158,23 @@ if DEBUG:
     user_ids = raw_train_df["uid"].sample(100, random_state=config["/global/seed"]).tolist()
     raw_train_df = raw_train_df[raw_train_df["uid"].isin(user_ids)].reset_index(drop=True)
 
+# add fold index
+train_df = add_fold(config=config, df=raw_train_df)
+
 # feature engineering
-train_df = make_features(config=config, df=raw_train_df, overwrite=True)
+train_df = make_features(config=config, df=train_df, overwrite=True)
 
-
-def make_sequences(df: pd.DataFrame, group_key: str, group_values: list[str]):
-    grouped = df.groupby(group_key, sort=False)
-    sequences = [torch.tensor(group[group_values].to_numpy()) for _, group in grouped]
-    return sequences
-
-
-# feature_names = [x for x in train_df.columns if x.startswith("f_")]
-feature_seqs = make_sequences(df=train_df, group_key="uid", group_values=["d", "t"])
+# make sequences
+feature_names = [x for x in train_df.columns if x.startswith("f_")]
+feature_seqs = make_sequences(
+    df=train_df,
+    group_key="uid",
+    group_values=feature_names,
+)
 auxiliary_seqs = make_sequences(
-    df=train_df.query("d >= 60"), group_key="uid", group_values=["d", "t"]
+    df=train_df.query("d >= 60"),
+    group_key="uid",
+    group_values=["d", "t"],
 )  # features for prediction zone
 
 target_seqs = make_sequences(
