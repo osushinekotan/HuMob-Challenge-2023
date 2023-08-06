@@ -160,5 +160,9 @@ cython_debug/
 #.idea/
 
 # notebooks
-notebooks/*
-!notebooks/.gitkeep
+# notebooks/*
+# !notebooks/.gitkeep
+
+# resources
+resources/*
+!resources/.gitkeep
