@@ -10,15 +10,23 @@ class PadSequenceCollateFn:
 
     def __call__(self, batch):
         feature_seqs = [item["feature_seqs"] for item in batch]
-        lengths = [len(seq) for seq in feature_seqs]
+        auxiliary_seqs = [item["auxiliary_seqs"] for item in batch]
+        feature_lengths = [len(seq) for seq in feature_seqs]
+        auxiliary_lengths = [len(seq) for seq in auxiliary_seqs]
+
         feature_seqs_padded = pad_sequence(
             [(seq) for seq in feature_seqs], batch_first=True
+        )  # (sequence_len, feature_dim)
+        auxiliary_seqs_padded = pad_sequence(
+            [(seq) for seq in auxiliary_seqs], batch_first=True
         )  # (sequence_len, feature_dim)
 
         if not self.is_train_mode:
             return {
                 "feature_seqs": feature_seqs_padded,
-                "lengths": lengths,
+                "auxiliary_seqs": auxiliary_seqs_padded,
+                "feature_lengths": feature_lengths,
+                "auxiliary_lengths": auxiliary_lengths,
             }
 
         target_seqs = [item["target_seqs"] for item in batch]
@@ -27,14 +35,17 @@ class PadSequenceCollateFn:
         )  # (sequence_len, target_dim)
         return {
             "feature_seqs": feature_seqs_padded,
+            "auxiliary_seqs": auxiliary_seqs_padded,
             "target_seqs": target_seqs_padded,
-            "lengths": lengths,
+            "feature_lengths": feature_lengths,
+            "auxiliary_lengths": auxiliary_lengths,
         }
 
 
 def to_device(batch, device):
     for k, v in batch.items():
-        batch[k] = v.to(device)
+        if not k.endswith("lengths"):
+            batch[k] = v.to(device)
     return batch
 
 
@@ -76,7 +87,9 @@ def train_fn(config, wandb_logger):
             if config.batch_scheduler:
                 scheduler.step()
 
-        wandb_logger.log({"train_loss": loss, "lr": scheduler.get_lr()[0]})
+        if wandb_logger is not None:
+            wandb_logger.log({"train_loss": loss, "lr": scheduler.get_lr()[0]})
+
         losses.append(float(loss))
         iteration_bar.set_description(f"loss: {np.mean(losses):.4f} lr: {scheduler.get_lr()[0]:.6f}")
 

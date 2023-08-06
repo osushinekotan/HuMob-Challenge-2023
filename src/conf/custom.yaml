@@ -28,9 +28,9 @@ nn:
 
 model:
   type: CustomLSTMModelV1
-  input_size: ???
+  input_size1: ???
+  input_size2: ???
   hidden_size: 2
-  num_layers: 1
   output_size: ???
 
 dataset:

@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Callable
 
 import joblib
-import numpy as np
 import pandas as pd
+import torch
 from custom.config_types import CONFIG_TYPES
 from logger import Logger
 from pytorch_pfn_extras.config import Config
@@ -37,7 +37,8 @@ class TaskDatset:
         if self.raw_train_filepath.is_file() and (not self.overwrite):
             return pd.read_parquet(self.raw_train_filepath)
 
-        raw_train_df = self.raw_data.query("x != 999").reset_index(drop=True)
+        uids = self.raw_data.query("x != 999")["uid"].unique()
+        raw_train_df = self.raw_data[self.raw_data["uid"].isin(uids)].reset_index(drop=True)
         raw_train_df.to_parquet(self.raw_train_filepath)
         return raw_train_df
 
@@ -46,8 +47,9 @@ class TaskDatset:
         if self.raw_test_filepath.is_file() and (not self.overwrite):
             return pd.read_parquet(self.raw_test_filepath)
 
-        raw_test_df = self.raw_data.query("x == 999")
-        raw_test_df.to_parquet(self.raw_test_filepath).reset_index(drop=True)
+        uids = self.raw_data.query("x == 999")["uid"].unique()
+        raw_test_df = self.raw_data[self.raw_data["uid"].isin(uids)].reset_index(drop=True)
+        raw_test_df.to_parquet(self.raw_test_filepath)
         return raw_test_df
 
     @cached_property
@@ -133,42 +135,6 @@ def make_features(config, df, overwrite=False):
     return features_df
 
 
-class TrainValidDataset:
-    def __init__(self, config, uids, overwrite=True):
-        self.config = config
-        out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"]
-        self.train_filepath = out_dir / "train_feaures_df.pkl"
-        self.valid_filepath = out_dir / "valid_features_df.pkl"
-
-        self.uids = uids
-        self.overwrite = overwrite
-
-    @cached_property
-    def valid_uids(self):
-        valid_uids = (
-            pd.Series(np.unique(self.uids))
-            .sample(self.config["/cv/n_valid_uids"], random_state=self.config["/global/seed"])
-            .tolist()
-        )
-        return valid_uids
-
-    def load_valid_data(self, df):
-        if self.valid_filepath.is_file() and (not self.overwrite):
-            return joblib.load(self.train_filepath)
-
-        valid_df = df[df["uid"].isin(self.valid_uids)].reset_index(drop=True)
-        joblib.dump(valid_df, self.valid_filepath)
-        return valid_df
-
-    def load_train_data(self, df):
-        if self.train_filepath.is_file() and (not self.overwrite):
-            return joblib.load(self.train_filepath)
-
-        train_df = df[~df["uid"].isin(self.valid_uids)].reset_index(drop=True)
-        joblib.dump(train_df, self.train_filepath)
-        return train_df
-
-
 # load data
 task_dataset = TaskDatset(config=config, overwrite=True)
 raw_train_df = task_dataset.raw_train_data
@@ -180,9 +146,25 @@ if DEBUG:
 
 # feature engineering
 train_df = make_features(config=config, df=raw_train_df, overwrite=True)
-train_valid_dataset = TrainValidDataset(config=config, uids=train_df["uid"], overwrite=True)
-valid_df = train_valid_dataset.load_valid_data(df=train_df)
-train_df = train_valid_dataset.load_train_data(df=train_df)
 
 
+def make_sequences(df: pd.DataFrame, group_key: str, group_values: list[str]):
+    grouped = df.groupby(group_key, sort=False)
+    sequences = [torch.tensor(group[group_values].to_numpy()) for _, group in grouped]
+    return sequences
+
+
+# feature_names = [x for x in train_df.columns if x.startswith("f_")]
+feature_seqs = make_sequences(df=train_df, group_key="uid", group_values=["d", "t"])
+auxiliary_seqs = make_sequences(
+    df=train_df.query("d >= 60"), group_key="uid", group_values=["d", "t"]
+)  # features for prediction zone
+
+target_seqs = make_sequences(
+    df=train_df.query("d >= 60"),
+    group_key="uid",
+    group_values=["x", "y"],
+)  # target is x & y over 60 zone
+
+assert len(feature_seqs) == len(target_seqs) == len(auxiliary_seqs)
 print("OK")
