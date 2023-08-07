@@ -26,10 +26,14 @@ cv:
     random_state: "@/global/seed"
 
 nn:
+  out_dir: "001/models"
   device: ???
   max_epochs: 2
   gradient_accumulation_steps: 4
   fp16: False
+  batch_scheduler: True
+  iters_per_epoch: ???
+  num_training_steps: ???
 
   feature:
     feature_names: ???
@@ -107,4 +111,4 @@ nn:
     type: get_cosine_schedule_with_warmup
     optimizer: "@/optimizer"
     num_warmup_steps: 0
-    num_training_steps: ???
+    num_training_steps: "@/nn/num_training_steps"

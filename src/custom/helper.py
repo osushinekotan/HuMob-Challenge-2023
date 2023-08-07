@@ -49,8 +49,7 @@ def to_device(batch, device):
     return batch
 
 
-def train_fn(config, wandb_logger):
-    model = config["/model"]
+def train_fn(config, model, wandb_logger, total_step):
     dataloader = config["/dataloader/train"]
     criterion = config["/criterion"]
     optimizer = config["/optimizer"]
@@ -61,6 +60,7 @@ def train_fn(config, wandb_logger):
     use_amp = config["/nn/fp16"]
     gradient_accumulation_steps = config["/nn/gradient_accumulation_steps"]
     clip_grad_norm = config["/nn/clip_grad_norm"]
+    batch_scheduler = config["/nn/batch_scheduler"]
 
     model.train()
     scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
@@ -76,15 +76,16 @@ def train_fn(config, wandb_logger):
             loss = torch.div(loss, gradient_accumulation_steps)
 
         scaler.scale(loss).backward()
-        if config.clip_grad_norm is not None:
+        if clip_grad_norm is not None:
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
 
         if (step + 1) % gradient_accumulation_steps == 0:
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
+            total_step += 1
 
-            if config.batch_scheduler:
+            if batch_scheduler:
                 scheduler.step()
 
         if wandb_logger is not None:
@@ -94,11 +95,13 @@ def train_fn(config, wandb_logger):
         iteration_bar.set_description(f"loss: {np.mean(losses):.4f} lr: {scheduler.get_lr()[0]:.6f}")
 
     loss = np.mean(losses)
-    return {"loss": loss, "step": step}
+    if not batch_scheduler:
+        scheduler.step()
+
+    return {"loss": loss, "step": total_step}
 
 
-def valid_fn(config):
-    model = config["/model"]
+def valid_fn(config, model):
     dataloader = config["/dataloader/valid"]
     criterion = config["/criterion"]
 
@@ -124,6 +127,7 @@ def valid_fn(config):
 
         iteration_bar.set_description(f"loss: {np.mean(losses):.4f}")
 
+    targets = np.concatenate([batch["targets"] for batch in dataloader])  # to store targets
     outputs = np.concatenate(outputs)
     loss = np.mean(losses)
-    return {"loss": loss, "outputs": outputs}
+    return {"loss": loss, "outputs": outputs, "targets": targets}
