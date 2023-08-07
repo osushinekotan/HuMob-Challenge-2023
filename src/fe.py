@@ -5,7 +5,6 @@ from typing import Callable
 
 import joblib
 import pandas as pd
-import torch
 from custom.config_types import CONFIG_TYPES
 from logger import Logger
 from pytorch_pfn_extras.config import Config
@@ -19,6 +18,7 @@ config = Config(pre_eval_config, types=CONFIG_TYPES)
 
 # set const
 DEBUG = config["/global/debug"]
+DEBUG_N_UIDS = 100
 
 
 class TaskDatset:
@@ -35,21 +35,26 @@ class TaskDatset:
     @property
     def raw_train_data(self):
         if self.raw_train_filepath.is_file() and (not self.overwrite):
+            logger.info(f"read_parquet : {self.raw_train_filepath}")
             return pd.read_parquet(self.raw_train_filepath)
 
-        uids = self.raw_data.query("x != 999")["uid"].unique()
-        raw_train_df = self.raw_data[self.raw_data["uid"].isin(uids)].reset_index(drop=True)
-        raw_train_df.to_parquet(self.raw_train_filepath)
+        with logger.time_log(target="raw_train_data"):
+            uids = self.raw_data.query("x != 999")["uid"].unique()
+            raw_train_df = self.raw_data[self.raw_data["uid"].isin(uids)].reset_index(drop=True)
+            raw_train_df.to_parquet(self.raw_train_filepath)
+
         return raw_train_df
 
     @property
     def raw_test_data(self):
         if self.raw_test_filepath.is_file() and (not self.overwrite):
+            logger.info(f"read_parquet : {self.raw_test_filepath}")
             return pd.read_parquet(self.raw_test_filepath)
 
-        uids = self.raw_data.query("x == 999")["uid"].unique()
-        raw_test_df = self.raw_data[self.raw_data["uid"].isin(uids)].reset_index(drop=True)
-        raw_test_df.to_parquet(self.raw_test_filepath)
+        with logger.time_log(target="raw_test_data"):
+            uids = self.raw_data.query("x == 999")["uid"].unique()
+            raw_test_df = self.raw_data[self.raw_data["uid"].isin(uids)].reset_index(drop=True)
+            raw_test_df.to_parquet(self.raw_test_filepath)
         return raw_test_df
 
     @cached_property
@@ -66,6 +71,12 @@ class TaskDatset:
         return read_parquet_from_csv(filepath=self.dirpath / "cell_POIcat.csv.gz", dirpath=self.dirpath)
 
 
+def convert_debug_train_df(df, n_uids=100, random_state=None):
+    user_ids = df["uid"].sample(n_uids, random_state=random_state).tolist()
+    debug_df = df[df["uid"].isin(user_ids)].reset_index(drop=True)
+    return debug_df
+
+
 def read_parquet_from_csv(
     filepath: Path,
     dirpath: Path,
@@ -75,7 +86,7 @@ def read_parquet_from_csv(
     name = filepath.name.split(".")[0]
     parquet_filepath = dirpath / f"{name}.parquet"
     if parquet_filepath.is_file() and (not overwrite):
-        logger.info(f"load parquet file ({str(filepath)})")
+        logger.info(f"read_parquet : ({str(filepath)})")
         return pd.read_parquet(parquet_filepath)
 
     logger.info(f"load csv & convert to parquet ({str(filepath)})")
@@ -122,66 +133,67 @@ def cache(out_dir: Path, overwrite: bool = False, no_cache: bool = False):
     return decorator
 
 
-def make_features(config, df, overwrite=False):
-    extractors = config["fe/extractors"]
-    out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"]
+def make_features(config, df, overwrite=False, no_cache=False, name=""):
+    extractors = config["/fe/extractors"]
+    dataset_name = config["/fe/dataset"]
 
-    @cache(out_dir=out_dir, overwrite=overwrite)
+    # set dir
+    out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"] / dataset_name
+    logger.debug(f"make_features: overwrite={overwrite}, no_cache={no_cache}")
+
+    # cache for final output
+    filepath_for_features_df = out_dir / f"{name}.pkl"
+    if filepath_for_features_df.is_file() and (not overwrite):
+        logger.info(f"load : {filepath_for_features_df}")
+        return joblib.load(filepath_for_features_df)
+
+    # feature engineering
+    @cache(out_dir=out_dir, overwrite=overwrite, no_cache=no_cache)
     def _extract(df, extractor):
         with logger.time_log(target=extractor.__class__.__name__):
             return extractor(df)
 
     features_df = pd.concat([df] + [_extract(df, extractor) for extractor in extractors], axis=1)
+    joblib.dump(features_df, filepath_for_features_df)
     return features_df
 
 
-def make_sequences(df: pd.DataFrame, group_key: str, group_values: list[str]):
-    grouped = df.groupby(group_key, sort=False)
-    sequences = [torch.tensor(group[group_values].to_numpy()) for _, group in grouped]
-    return sequences
-
-
-def add_fold(config, df):
-    df["fold"] = -1
-    cv = config["/cv/strategy"]
-    for i_fold, (tr_idx, va_idx) in enumerate(cv.split(X=df, y=df["fold"], groups=df["uid"])):
-        df.loc[va_idx, "fold"] = i_fold
+def add_fold_index(config, df):
+    with logger.time_log("add_fold"):
+        df["fold"] = -1
+        cv = config["/cv/strategy"]
+        for i_fold, (tr_idx, va_idx) in enumerate(cv.split(X=df, y=df["fold"], groups=df["uid"])):
+            df.loc[va_idx, "fold"] = i_fold
     return df
 
 
-# load data
-task_dataset = TaskDatset(config=config, overwrite=True)
-raw_train_df = task_dataset.raw_train_data
-poi_df = task_dataset.poi_data
+def main():
+    # load data
+    task_dataset = TaskDatset(config=config, overwrite=False)
+    raw_train_df = task_dataset.raw_train_data
 
-if DEBUG:
-    user_ids = raw_train_df["uid"].sample(100, random_state=config["/global/seed"]).tolist()
-    raw_train_df = raw_train_df[raw_train_df["uid"].isin(user_ids)].reset_index(drop=True)
+    if DEBUG:
+        raw_train_df = convert_debug_train_df(
+            df=raw_train_df,
+            n_uids=DEBUG_N_UIDS,
+            random_state=config["/global/seed"],
+        )
 
-# add fold index
-train_df = add_fold(config=config, df=raw_train_df)
+    # feature engineering
+    train_feature_df = make_features(config=config, df=raw_train_df, overwrite=True, name="train_feature_df")
+    test_feature_df = make_features(
+        config=config,
+        df=task_dataset.raw_test_data,
+        overwrite=True,
+        name="test_feature_df",
+    )
 
-# feature engineering
-train_df = make_features(config=config, df=train_df, overwrite=True)
+    # add fold index
+    train_feature_df = add_fold_index(config=config, df=train_feature_df)
 
-# make sequences
-feature_names = [x for x in train_df.columns if x.startswith("f_")]
-feature_seqs = make_sequences(
-    df=train_df,
-    group_key="uid",
-    group_values=feature_names,
-)
-auxiliary_seqs = make_sequences(
-    df=train_df.query("d >= 60"),
-    group_key="uid",
-    group_values=["d", "t"],
-)  # features for prediction zone
+    # check
+    logger.debug(f"train_feature_df : {train_feature_df.shape}, test_feature_df : {test_feature_df.shape}")
 
-target_seqs = make_sequences(
-    df=train_df.query("d >= 60"),
-    group_key="uid",
-    group_values=["x", "y"],
-)  # target is x & y over 60 zone
 
-assert len(feature_seqs) == len(target_seqs) == len(auxiliary_seqs)
-print("OK")
+if __name__ == "__main__":
+    main()
