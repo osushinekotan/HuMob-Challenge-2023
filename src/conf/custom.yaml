@@ -29,7 +29,7 @@ cv:
 nn:
   out_dir: "001/models"
   device: ???
-  padding_value: -1
+  padding_value: -999
   max_epochs: 2
   gradient_accumulation_steps: 4
   clip_grad_norm: 1000
@@ -51,10 +51,11 @@ nn:
     output_size: ???
 
   criterion:
-    type: MSELoss
+    type: MaskedMSELoss
+    padding_value: "@/nn/padding_value"
 
   metrics:
-    type: MaskedMSELoss
+    type: MaskedMSEMetrics
     padding_value: "@/nn/padding_value"
 
   dataset:
