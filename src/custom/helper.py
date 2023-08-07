@@ -89,7 +89,7 @@ def train_fn(config, model, wandb_logger, total_step):
                 scheduler.step()
 
         if wandb_logger is not None:
-            wandb_logger.log({"train_loss": loss, "lr": scheduler.get_lr()[0]})
+            wandb_logger.log({"train_loss": loss, "lr": scheduler.get_lr()[0], "train_step": total_step})
 
         losses.append(float(loss))
         iteration_bar.set_description(f"loss: {np.mean(losses):.4f} lr: {scheduler.get_lr()[0]:.6f}")

@@ -67,7 +67,7 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
         feature_names if feature_names != "???" else [x for x in train_feature_df.columns if x.startswith("f_")]
     )
 
-    # target
+    # target (fix)
     lower_target_d = 60
 
     # train sequences
@@ -103,6 +103,11 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
         group_key="uid",
         group_values=pre_eval_config["nn"]["feature"]["target_names"],
     )
+
+    # model
+    pre_eval_config["nn"]["model"]["input_size1"] = len(feature_names)
+    pre_eval_config["nn"]["model"]["input_size2"] = len(pre_eval_config["nn"]["feature"]["auxiliary_names"])
+    pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
 
     # check
     assert (

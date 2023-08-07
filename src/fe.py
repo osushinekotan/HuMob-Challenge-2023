@@ -63,7 +63,7 @@ class TaskDatset:
             filepath=self.dirpath / f"{self.dataset_name}.csv.gz",
             dirpath=self.dirpath,
             process_fns=[reduce_mem_usage, sort_df_numpy],
-            overwrite=self.config["/fe/overwrite"],
+            overwrite=False,
         )
 
     @property
