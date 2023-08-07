@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -5,8 +7,9 @@ from tqdm import tqdm
 
 
 class PadSequenceCollateFn:
-    def __init__(self, is_train_mode=True):
+    def __init__(self, is_train_mode=True, padding_value=-1):
         self.is_train_mode = is_train_mode
+        self.padding_value = padding_value
 
     def __call__(self, batch):
         feature_seqs = [item["feature_seqs"] for item in batch]
@@ -15,10 +18,14 @@ class PadSequenceCollateFn:
         auxiliary_lengths = [len(seq) for seq in auxiliary_seqs]
 
         feature_seqs_padded = pad_sequence(
-            [(seq) for seq in feature_seqs], batch_first=True
+            [(seq) for seq in feature_seqs],
+            batch_first=True,
+            padding_value=self.padding_value,
         )  # (sequence_len, feature_dim)
         auxiliary_seqs_padded = pad_sequence(
-            [(seq) for seq in auxiliary_seqs], batch_first=True
+            [(seq) for seq in auxiliary_seqs],
+            batch_first=True,
+            padding_value=self.padding_value,
         )  # (sequence_len, feature_dim)
 
         if not self.is_train_mode:
@@ -31,7 +38,9 @@ class PadSequenceCollateFn:
 
         target_seqs = [item["target_seqs"] for item in batch]
         target_seqs_padded = pad_sequence(
-            [(seq) for seq in target_seqs], batch_first=True
+            [(seq) for seq in target_seqs],
+            batch_first=True,
+            padding_value=self.padding_value,
         )  # (sequence_len, target_dim)
         return {
             "feature_seqs": feature_seqs_padded,
@@ -50,10 +59,10 @@ def to_device(batch, device):
 
 
 def train_fn(config, model, wandb_logger, total_step):
-    dataloader = config["/dataloader/train"]
-    criterion = config["/criterion"]
-    optimizer = config["/optimizer"]
-    scheduler = config["/scheduler"]
+    dataloader = config["/nn/dataloader/train"]
+    criterion = config["/nn/criterion"]
+    optimizer = config["/nn/optimizer"]
+    scheduler = config["/nn/scheduler"]
 
     # training settings
     device = config["/nn/device"]
@@ -72,7 +81,7 @@ def train_fn(config, model, wandb_logger, total_step):
 
         with torch.cuda.amp.autocast(enabled=use_amp):
             batch_outputs = model(batch)
-            loss = criterion(batch_outputs, batch)
+            loss = criterion(batch_outputs, batch["target_seqs"])
             loss = torch.div(loss, gradient_accumulation_steps)
 
         scaler.scale(loss).backward()
@@ -89,10 +98,10 @@ def train_fn(config, model, wandb_logger, total_step):
                 scheduler.step()
 
         if wandb_logger is not None:
-            wandb_logger.log({"train_loss": loss, "lr": scheduler.get_lr()[0], "train_step": total_step})
+            wandb_logger.log({"train_loss": loss, "lr": scheduler.get_last_lr()[0], "train_step": total_step})
 
         losses.append(float(loss))
-        iteration_bar.set_description(f"loss: {np.mean(losses):.4f} lr: {scheduler.get_lr()[0]:.6f}")
+        iteration_bar.set_description(f"loss: {np.mean(losses):.4f} lr: {scheduler.get_last_lr()[0]:.6f}")
 
     loss = np.mean(losses)
     if not batch_scheduler:
@@ -102,8 +111,8 @@ def train_fn(config, model, wandb_logger, total_step):
 
 
 def valid_fn(config, model):
-    dataloader = config["/dataloader/valid"]
-    criterion = config["/criterion"]
+    dataloader = config["/nn/dataloader/valid"]
+    criterion = config["/nn/criterion"]
 
     # training settings
     device = config["/nn/device"]
@@ -118,7 +127,7 @@ def valid_fn(config, model):
 
         with torch.no_grad():
             batch_outputs = model(batch)
-            loss = criterion(batch_outputs, batch)
+            loss = criterion(batch_outputs, batch["target_seqs"])
             loss = torch.div(loss, gradient_accumulation_steps)
 
         batch_outputs = batch_outputs.to("cpu").numpy()
@@ -126,8 +135,9 @@ def valid_fn(config, model):
         losses.append(float(loss))
 
         iteration_bar.set_description(f"loss: {np.mean(losses):.4f}")
-
-    targets = np.concatenate([batch["targets"] for batch in dataloader])  # to store targets
-    outputs = np.concatenate(outputs)
+    targets = list(
+        itertools.chain.from_iterable([batch["target_seqs"].numpy() for batch in dataloader])
+    )  # to store targets
+    outputs = list(itertools.chain.from_iterable(outputs))
     loss = np.mean(losses)
     return {"loss": loss, "outputs": outputs, "targets": targets}

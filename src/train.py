@@ -8,14 +8,15 @@ import joblib
 import numpy as np
 import pandas as pd
 import torch
-import wandb
 from custom.config_types import CONFIG_TYPES
 from custom.helper import train_fn, valid_fn
 from logger import Logger
 from pytorch_pfn_extras.config import Config
 from util import load_yaml, seed_everything
 
-logger = Logger(name="fe")
+import wandb
+
+logger = Logger(name="train")
 wandb.login(key=os.environ["WANDB_KEY"])  # need wandb account
 
 
@@ -54,12 +55,13 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
     # update parameters
     num_training_steps, iters_per_epoch = calc_steps(
         train_length=len(train_feature_df),
-        batch_size=pre_eval_config["dataloader"]["train"]["batch_size"],
+        batch_size=pre_eval_config["nn"]["dataloader"]["train"]["batch_size"],
         max_epochs=pre_eval_config["nn"]["max_epochs"],
         gradient_accumulation_steps=pre_eval_config["nn"]["gradient_accumulation_steps"],
     )
     pre_eval_config["nn"]["num_training_steps"] = num_training_steps
     pre_eval_config["nn"]["iters_per_epoch"] = iters_per_epoch
+    pre_eval_config["nn"]["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # set feature names
     feature_names = pre_eval_config["nn"]["feature"]["feature_names"]
@@ -131,6 +133,8 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
     model = config["/nn/model"]
     max_epochs = pre_eval_config["nn"]["max_epochs"]
     out_dir = Path(config["/global/resources"]) / "output" / config["nn/out_dir"]
+
+    # setup
     wandb.init(
         project=config["/global/project"],
         name=config["/nn/out_dir"],
@@ -139,6 +143,7 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
         anonymous=None,
         reinit=True,
     )
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     total_step = 0  # to record total step accross epochs
     best_score = -np.inf
@@ -155,12 +160,12 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
 
         # valid
         va_output = valid_fn(config=config, model=model)
-        eval_score = metrics(targets=va_output["targets"], outputs=va_output["outputs"])
+        eval_score = metrics(va_output["outputs"], va_output["targets"])
 
         # logs
         logs = {
             "epoch": epoch,
-            "eval_score": eval_score,
+            "eval_score": float(eval_score),
             "train_loss_epoch": loss.item(),
             "valid_loss_epoch": va_output["loss"].item(),
         }
@@ -183,7 +188,7 @@ def train_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
     num_fold = pre_eval_config["cv"]["num_fold"]
     valid_folds = pre_eval_config["cv"]["valid_folds"]
 
-    for i_fold in num_fold:
+    for i_fold in range(num_fold):
         if i_fold not in valid_folds:
             continue
 
@@ -192,7 +197,7 @@ def train_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
             valid_feature_df = df[df["fold"] == i_fold].reset_index(drop=True)
 
             train_loop(
-                config=pre_eval_config,
+                pre_eval_config=pre_eval_config,
                 train_data=train_feature_df,
                 valid_data=valid_feature_df,
                 loop_name=f"fold_{i_fold}",

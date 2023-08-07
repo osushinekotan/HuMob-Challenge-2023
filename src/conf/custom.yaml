@@ -29,8 +29,10 @@ cv:
 nn:
   out_dir: "001/models"
   device: ???
+  padding_value: -1
   max_epochs: 2
   gradient_accumulation_steps: 4
+  clip_grad_norm: 1000
   fp16: False
   batch_scheduler: True
   iters_per_epoch: ???
@@ -47,6 +49,13 @@ nn:
     input_size2: ???
     hidden_size: 2
     output_size: ???
+
+  criterion:
+    type: MSELoss
+
+  metrics:
+    type: MaskedMSELoss
+    padding_value: "@/nn/padding_value"
 
   dataset:
     train:
@@ -65,13 +74,13 @@ nn:
       auxiliary_seqs: ???
 
   dataloader:
-    collate_fn: PadSequenceCollateFn
     train:
       type: DataLoader
-      dataset: "@/dataset/train"
+      dataset: "@/nn/dataset/train"
       collate_fn:
-        type: "@/dataloader/collate_fn"
-        is_train_model: True
+        type: PadSequenceCollateFn
+        is_train_mode: True
+        padding_value: "@/nn/padding_value"
       batch_size: 2
       num_workers: 4
       shuffle: True
@@ -79,10 +88,11 @@ nn:
       drop_last: True
     valid:
       type: DataLoader
-      dataset: "@/dataset/valid"
+      dataset: "@/nn/dataset/valid"
       collate_fn:
-        type: "@/dataloader/collate_fn"
-        is_train_model: True
+        type: PadSequenceCollateFn
+        is_train_mode: True
+        padding_value: "@/nn/padding_value"
       batch_size: 2
       num_workers: 4
       shuffle: True
@@ -90,10 +100,11 @@ nn:
       drop_last: True
     test:
       type: DataLoader
-      dataset: "@/dataset/test"
+      dataset: "@/nn/dataset/test"
       collate_fn:
-        type: "@/dataloader/collate_fn"
-        is_train_model: False
+        type: PadSequenceCollateFn
+        is_train_mode: False
+        padding_value: "@/nn/padding_value"
       batch_size: 2
       num_workers: 4
       shuffle: False
@@ -102,7 +113,7 @@ nn:
 
   optimizer:
     type: AdamW
-    params: { type: method_call, obj: "@/model", method: parameters }
+    params: { type: method_call, obj: "@/nn/model", method: parameters }
     lr: 2.0e-4
     weight_decay: 1.0e-2
     eps: 1.0e-6
@@ -110,6 +121,6 @@ nn:
 
   scheduler:
     type: get_cosine_schedule_with_warmup
-    optimizer: "@/optimizer"
+    optimizer: "@/nn/optimizer"
     num_warmup_steps: 0
     num_training_steps: "@/nn/num_training_steps"

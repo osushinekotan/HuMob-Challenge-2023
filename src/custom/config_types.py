@@ -1,6 +1,7 @@
 from custom.dataset import TestDataset, TrainDataset
 from custom.feature.feature_extractor import GroupedDiffFeatureExtractor, RawFeatureExtractor
 from custom.helper import PadSequenceCollateFn
+from custom.metrics import MaskedMSELoss
 from custom.model import CustomLSTMModelV1
 from sklearn.model_selection import StratifiedGroupKFold
 from torch import nn
@@ -30,4 +31,6 @@ CONFIG_TYPES = dict(
     get_linear_schedule_with_warmup=get_linear_schedule_with_warmup,
     # loss
     CrossEntropyLoss=nn.CrossEntropyLoss,
+    MSELoss=nn.MSELoss,
+    MaskedMSELoss=MaskedMSELoss,
 )

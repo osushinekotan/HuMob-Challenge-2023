@@ -166,3 +166,5 @@ cython_debug/
 # resources
 resources/*
 !resources/.gitkeep
+
+wandb/
