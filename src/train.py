@@ -1,20 +1,25 @@
+import gc
 import math
+import os
 from pathlib import Path
+from typing import Any
 
 import joblib
 import numpy as np
 import pandas as pd
 import torch
+import wandb
 from custom.config_types import CONFIG_TYPES
 from custom.helper import train_fn, valid_fn
 from logger import Logger
 from pytorch_pfn_extras.config import Config
-from util import load_yaml
+from util import load_yaml, seed_everything
 
 logger = Logger(name="fe")
+wandb.login(key=os.environ["WANDB_KEY"])  # need wandb account
 
 
-def load_feature_df(pre_eval_config, name):
+def load_feature_df(pre_eval_config: dict, name: str) -> Any:
     filepath_for_features_df = (
         Path(pre_eval_config["global"]["resources"])
         / "output"
@@ -25,7 +30,7 @@ def load_feature_df(pre_eval_config, name):
     return joblib.load(filepath_for_features_df)
 
 
-def make_sequences(df: pd.DataFrame, group_key: str, group_values: list[str]):
+def make_sequences(df: pd.DataFrame, group_key: str, group_values: list[str]) -> Any:
     with logger.time_log("make_sequences"):
         grouped = df.groupby(group_key, sort=False)
         sequences = [torch.tensor(group[group_values].to_numpy()) for _, group in grouped]
@@ -45,7 +50,7 @@ def calc_steps(
     return training_steps, iters_per_epoch
 
 
-def set_config(pre_eval_config, train_feature_df, valid_feature_df):
+def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feature_df: pd.DataFrame) -> Config:
     # update parameters
     num_training_steps, iters_per_epoch = calc_steps(
         train_length=len(train_feature_df),
@@ -114,15 +119,21 @@ def set_config(pre_eval_config, train_feature_df, valid_feature_df):
     return Config(pre_eval_config, types=CONFIG_TYPES)
 
 
-def train_loop(pre_eval_config, train_data, valid_data, loop_name, wandb_logger=None):
+def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_name: str) -> None:
     # eval config
     config = set_config(pre_eval_config, train_data, valid_data)
     metrics = config["/nn/metrics"]  # get metrics
     model = config["/nn/model"]
     max_epochs = pre_eval_config["nn"]["max_epochs"]
     out_dir = Path(config["/global/resources"]) / "output" / config["nn/out_dir"]
-    
-    
+    wandb.init(
+        project=config["/global/project"],
+        name=config["/nn/out_dir"],
+        group=loop_name,
+        job_type="train",
+        anonymous=None,
+        reinit=True,
+    )
 
     total_step = 0  # to record total step accross epochs
     best_score = -np.inf
@@ -132,7 +143,7 @@ def train_loop(pre_eval_config, train_data, valid_data, loop_name, wandb_logger=
             config=config,
             model=model,
             total_step=total_step,
-            wandb_logger=wandb_logger,
+            wandb_logger=wandb,
         )
         loss, step = tr_output["loss"], tr_output["step"]
         total_step += step
@@ -149,8 +160,7 @@ def train_loop(pre_eval_config, train_data, valid_data, loop_name, wandb_logger=
             "valid_loss_epoch": va_output["loss"].item(),
         }
         logger.info(logs)
-        if wandb_logger is not None:
-            wandb_logger.log(logs)
+        wandb.log(logs)
 
         if best_score < eval_score:
             best_score = eval_score
@@ -159,8 +169,12 @@ def train_loop(pre_eval_config, train_data, valid_data, loop_name, wandb_logger=
             torch.save(model.state_dict(), out_dir / f"{loop_name}.pth")  # save model weight
             joblib.dump(va_output, out_dir / f"{loop_name}.pkl")  # save outputs
 
+    wandb.finish(quiet=True)
+    torch.cuda.empty_cache()
+    gc.collect()
 
-def train_fold(pre_eval_config, df):
+
+def train_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
     num_fold = pre_eval_config["cv"]["num_fold"]
     valid_folds = pre_eval_config["cv"]["valid_folds"]
 
@@ -180,7 +194,14 @@ def train_fold(pre_eval_config, df):
             )
 
 
-def main():
+def main() -> None:
     pre_eval_config = load_yaml()
+    seed_everything(pre_eval_config["global"]["seed"])
+
     feature_df = load_feature_df(pre_eval_config=pre_eval_config, name="train_feature_df")
-    train_fold(pre_eval_config, df=feature_df)
+    with logger.time_log("train_fold"):
+        train_fold(pre_eval_config, df=feature_df)
+
+
+if __name__ == "__main__":
+    main()

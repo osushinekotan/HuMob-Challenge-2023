@@ -1,4 +1,5 @@
 global:
+  project: "HuMob-Challenge-2023"
   seed: 8823
   debug: True
   resources: "/workspace/resources"

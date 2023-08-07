@@ -22,7 +22,7 @@ DEBUG_N_UIDS = 100
 
 
 class TaskDatset:
-    def __init__(self, config, overwrite=False) -> None:
+    def __init__(self, config: Config, overwrite: bool = False) -> None:
         self.config = config
         self.dirpath = Path(config["/global/resources"]) / "input"
         self.dataset_name = config["/fe/dataset"]
@@ -33,7 +33,7 @@ class TaskDatset:
         self.overwrite = overwrite
 
     @property
-    def raw_train_data(self):
+    def raw_train_data(self) -> pd.DataFrame:
         if self.raw_train_filepath.is_file() and (not self.overwrite):
             logger.info(f"read_parquet : {self.raw_train_filepath}")
             return pd.read_parquet(self.raw_train_filepath)
@@ -46,7 +46,7 @@ class TaskDatset:
         return raw_train_df
 
     @property
-    def raw_test_data(self):
+    def raw_test_data(self) -> pd.DataFrame:
         if self.raw_test_filepath.is_file() and (not self.overwrite):
             logger.info(f"read_parquet : {self.raw_test_filepath}")
             return pd.read_parquet(self.raw_test_filepath)
@@ -58,7 +58,7 @@ class TaskDatset:
         return raw_test_df
 
     @cached_property
-    def raw_data(self):
+    def raw_data(self) -> pd.DataFrame:
         return read_parquet_from_csv(
             filepath=self.dirpath / f"{self.dataset_name}.csv.gz",
             dirpath=self.dirpath,
@@ -67,11 +67,11 @@ class TaskDatset:
         )
 
     @property
-    def poi_data(self):
+    def poi_data(self) -> pd.DataFrame:
         return read_parquet_from_csv(filepath=self.dirpath / "cell_POIcat.csv.gz", dirpath=self.dirpath)
 
 
-def convert_debug_train_df(df, n_uids=100, random_state=None):
+def convert_debug_train_df(df: pd.DataFrame, n_uids: int = 100, random_state: int | None = None):
     user_ids = df["uid"].sample(n_uids, random_state=random_state).tolist()
     debug_df = df[df["uid"].isin(user_ids)].reset_index(drop=True)
     return debug_df
@@ -133,7 +133,13 @@ def cache(out_dir: Path, overwrite: bool = False, no_cache: bool = False):
     return decorator
 
 
-def make_features(config, df, overwrite=False, no_cache=False, name=""):
+def make_features(
+    config: Config,
+    df: pd.DataFrame,
+    overwrite: bool = False,
+    no_cache: bool = False,
+    name: str = "",
+) -> pd.DataFrame:
     extractors = config["/fe/extractors"]
     dataset_name = config["/fe/dataset"]
 
@@ -158,7 +164,7 @@ def make_features(config, df, overwrite=False, no_cache=False, name=""):
     return features_df
 
 
-def add_fold_index(config, df):
+def add_fold_index(config: Config, df: pd.DataFrame) -> pd.DataFrame:
     with logger.time_log("add_fold"):
         df["fold"] = -1
         cv = config["/cv/strategy"]
@@ -167,7 +173,7 @@ def add_fold_index(config, df):
     return df
 
 
-def main():
+def main() -> None:
     # load data
     task_dataset = TaskDatset(config=config, overwrite=False)
     raw_train_df = task_dataset.raw_train_data
