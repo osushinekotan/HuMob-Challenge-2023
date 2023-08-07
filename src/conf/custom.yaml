@@ -1,6 +1,6 @@
 global:
   seed: 8823
-  debug: False
+  debug: True
   resources: "/workspace/resources"
 
 fe:
@@ -17,12 +17,13 @@ fe:
     - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] }
 
 cv:
+  num_fold: 5
+  valid_folds: [0, 1, 2]
   strategy:
     type: StratifiedGroupKFold
-    n_splits: 5
+    n_splits: "@/cv/num_fold"
     shuffle: True
     random_state: "@/global/seed"
-  valid_folds: [0, 1, 2]
 
 nn:
   device: ???
@@ -30,75 +31,80 @@ nn:
   gradient_accumulation_steps: 4
   fp16: False
 
-model:
-  type: CustomLSTMModelV1
-  input_size1: ???
-  input_size2: ???
-  hidden_size: 2
-  output_size: ???
+  feature:
+    feature_names: ???
+    auxiliary_names: ["t", "d"]
+    target_names: ["x", "y"]
 
-dataset:
-  train:
-    type: TrainDataset
-    feature_seqs: ???
-    target_seqs: ???
-  valid:
-    type: TrainDataset
-    feature_seqs: ???
-    target_seqs: ???
-  test:
-    type: TestDataset
-    feature_seqs: ???
+  model:
+    type: CustomLSTMModelV1
+    input_size1: ???
+    input_size2: ???
+    hidden_size: 2
+    output_size: ???
 
-dataloader:
-  collate_fn: PadSequenceCollateFn
+  dataset:
+    train:
+      type: TrainDataset
+      feature_seqs: ???
+      auxiliary_seqs: ???
+      target_seqs: ???
+    valid:
+      type: TrainDataset
+      feature_seqs: ???
+      auxiliary_seqs: ???
+      target_seqs: ???
+    test:
+      type: TestDataset
+      feature_seqs: ???
+      auxiliary_seqs: ???
 
-  train:
-    type: DataLoader
-    dataset: "@/dataset/train"
-    collate_fn:
-      type: "@/dataloader/collate_fn"
-      is_train_model: True
-    batch_size: 2
-    num_workers: 4
-    shuffle: True
-    pin_memory: True
-    drop_last: True
+  dataloader:
+    collate_fn: PadSequenceCollateFn
+    train:
+      type: DataLoader
+      dataset: "@/dataset/train"
+      collate_fn:
+        type: "@/dataloader/collate_fn"
+        is_train_model: True
+      batch_size: 2
+      num_workers: 4
+      shuffle: True
+      pin_memory: True
+      drop_last: True
+    valid:
+      type: DataLoader
+      dataset: "@/dataset/valid"
+      collate_fn:
+        type: "@/dataloader/collate_fn"
+        is_train_model: True
+      batch_size: 2
+      num_workers: 4
+      shuffle: True
+      pin_memory: True
+      drop_last: True
+    test:
+      type: DataLoader
+      dataset: "@/dataset/test"
+      collate_fn:
+        type: "@/dataloader/collate_fn"
+        is_train_model: False
+      batch_size: 2
+      num_workers: 4
+      shuffle: False
+      pin_memory: True
+      drop_last: False
 
-  valid:
-    type: DataLoader
-    dataset: "@/dataset/valid"
-    collate_fn:
-      type: "@/dataloader/collate_fn"
-      is_train_model: True
-    batch_size: 2
-    num_workers: 4
-    shuffle: True
-    pin_memory: True
-    drop_last: True
+  optimizer:
+    type: AdamW
+    params: { type: method_call, obj: "@/model", method: parameters }
+    lr: 2.0e-4
+    weight_decay: 1.0e-2
+    eps: 1.0e-6
+    betas: [0.9, 0.999]
 
-  test:
-    type: DataLoader
-    dataset: "@/dataset/test"
-    collate_fn:
-      type: "@/dataloader/collate_fn"
-      is_train_model: False
-    batch_size: 2
-    num_workers: 4
-    shuffle: False
-    pin_memory: True
-    drop_last: False
-
-optimizer:
-  type: AdamW
-  params: { type: method_call, obj: "@/model", method: parameters }
-  lr: 2.0e-4
-  weight_decay: 1.0e-2
-  eps: 1.0e-6
-  betas: [0.9, 0.999]
-
-scheduler:
-  type: get_cosine_schedule_with_warmup
-  optimizer: "@/optimizer"
-  num_warmup_steps: 0
-  num_training_steps: ???
+  scheduler:
+    type: get_cosine_schedule_with_warmup
+    optimizer: "@/optimizer"
+    num_warmup_steps: 0
+    num_training_steps: ???

@@ -179,17 +179,22 @@ def main():
             random_state=config["/global/seed"],
         )
 
+    # add fold index
+    raw_train_df = add_fold_index(config=config, df=raw_train_df)
+
     # feature engineering
-    train_feature_df = make_features(config=config, df=raw_train_df, overwrite=True, name="train_feature_df")
+    train_feature_df = make_features(
+        config=config,
+        df=raw_train_df,
+        overwrite=True,
+        name="train_feature_df",
+    )
     test_feature_df = make_features(
         config=config,
         df=task_dataset.raw_test_data,
         overwrite=True,
         name="test_feature_df",
     )
-
-    # add fold index
-    train_feature_df = add_fold_index(config=config, df=train_feature_df)
 
     # check
     logger.debug(f"train_feature_df : {train_feature_df.shape}, test_feature_df : {test_feature_df.shape}")
