@@ -59,7 +59,8 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
         max_epochs=pre_eval_config["nn"]["max_epochs"],
         gradient_accumulation_steps=pre_eval_config["nn"]["gradient_accumulation_steps"],
     )
-    print(num_training_steps)
+    logger.debug(f"num_training_steps: {num_training_steps}")
+
     pre_eval_config["nn"]["num_training_steps"] = num_training_steps
     pre_eval_config["nn"]["iters_per_epoch"] = iters_per_epoch
     pre_eval_config["nn"]["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -186,7 +186,7 @@ def main() -> None:
         )
         raw_test_df = convert_debug_train_df(
             df=task_dataset.raw_test_data,
-            n_uids=DEBUG_N_UIDS,
+            n_uids=10,
             random_state=config["/global/seed"],
         )
 
@@ -209,6 +209,7 @@ def main() -> None:
 
     # check
     logger.debug(f"train_feature_df : {train_feature_df.shape}, test_feature_df : {test_feature_df.shape}")
+    logger.debug(f"train_uids : {train_feature_df['uid'].nunique()}, test_uids : {test_feature_df['uid'].nunique()}")
 
 
 if __name__ == "__main__":

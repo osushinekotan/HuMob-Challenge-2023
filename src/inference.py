@@ -1,5 +1,4 @@
 import gc
-import os
 from pathlib import Path
 from typing import Any
 
@@ -12,10 +11,7 @@ from logger import Logger
 from pytorch_pfn_extras.config import Config
 from util import load_yaml, seed_everything
 
-import wandb
-
-logger = Logger(name="train")
-wandb.login(key=os.environ["WANDB_KEY"])  # need wandb account
+logger = Logger(name="inference")
 
 
 def load_feature_df(pre_eval_config: dict, name: str) -> Any:
@@ -68,7 +64,7 @@ def set_config(pre_eval_config: dict, test_feature_df: pd.DataFrame) -> Config:
 
     # check
     assert len(pre_eval_config["nn"]["dataset"]["test"]["auxiliary_seqs"]) == len(
-        pre_eval_config["nn"]["dataset"]["valid"]["feature_seqs"]
+        pre_eval_config["nn"]["dataset"]["test"]["feature_seqs"]
     )
 
     return Config(pre_eval_config, types=CONFIG_TYPES)
@@ -123,6 +119,8 @@ def main():
     feature_df = load_feature_df(pre_eval_config=pre_eval_config, name="test_feature_df")
     with logger.time_log("test_fold"):
         test_outputs = inference_fold(pre_eval_config, df=feature_df)
+
+    logger.debug(f"length0 : {len(test_outputs)}, length1: {len(test_outputs[0])}, length2: {len(test_outputs[0][1])}")
     joblib.dump(test_outputs, out_dir / "test_outputs.pkl")
 
 
