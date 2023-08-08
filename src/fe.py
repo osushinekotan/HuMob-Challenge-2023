@@ -39,8 +39,8 @@ class TaskDatset:
             return pd.read_parquet(self.raw_train_filepath)
 
         with logger.time_log(target="raw_train_data"):
-            uids = self.raw_data.query("x != 999")["uid"].unique()
-            raw_train_df = self.raw_data[self.raw_data["uid"].isin(uids)].reset_index(drop=True)
+            uids = self.raw_data.query("x == 999")["uid"].unique()
+            raw_train_df = self.raw_data[~self.raw_data["uid"].isin(uids)].reset_index(drop=True)
             raw_train_df.to_parquet(self.raw_train_filepath)
 
         return raw_train_df
@@ -97,6 +97,7 @@ def read_parquet_from_csv(
             logger.info(f"excute {fn.__name__}")
             df = fn(df)
 
+    df = df.reset_index(drop=True)
     df.to_parquet(parquet_filepath)
     return df
 
@@ -175,8 +176,9 @@ def add_fold_index(config: Config, df: pd.DataFrame) -> pd.DataFrame:
 
 def main() -> None:
     # load data
-    task_dataset = TaskDatset(config=config, overwrite=False)
+    task_dataset = TaskDatset(config=config, overwrite=True)
     raw_train_df = task_dataset.raw_train_data
+    raw_test_df = task_dataset.raw_test_data
 
     if DEBUG:
         raw_train_df = convert_debug_train_df(
@@ -185,7 +187,7 @@ def main() -> None:
             random_state=config["/global/seed"],
         )
         raw_test_df = convert_debug_train_df(
-            df=task_dataset.raw_test_data,
+            df=raw_test_df,
             n_uids=10,
             random_state=config["/global/seed"],
         )
@@ -210,6 +212,9 @@ def main() -> None:
     # check
     logger.debug(f"train_feature_df : {train_feature_df.shape}, test_feature_df : {test_feature_df.shape}")
     logger.debug(f"train_uids : {train_feature_df['uid'].nunique()}, test_uids : {test_feature_df['uid'].nunique()}")
+
+    assert len(train_feature_df.query("x == 999")) == 0
+    assert test_feature_df.query("x == 999")["uid"].nunique() == test_feature_df["uid"].nunique()
 
 
 if __name__ == "__main__":
