@@ -130,7 +130,9 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
 def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_name: str) -> None:
     # eval config
     config = set_config(pre_eval_config, train_data, valid_data)
-    metrics = config["/nn/metrics"]  # get metrics
+
+    # model setting
+    metrics = config["/nn/metrics"]
     model = config["/nn/model"]
     train_dataloader = config["/nn/dataloader/train"]
     valid_dataloader = config["/nn/dataloader/valid"]
