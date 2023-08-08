@@ -2,6 +2,7 @@ import itertools
 
 import numpy as np
 import torch
+from pytorch_pfn_extras.config import Config
 from torch.nn.utils.rnn import pad_sequence
 from tqdm import tqdm
 
@@ -58,12 +59,16 @@ def to_device(batch, device):
     return batch
 
 
-def train_fn(config, model, wandb_logger, total_step):
-    dataloader = config["/nn/dataloader/train"]
-    criterion = config["/nn/criterion"]
-    optimizer = config["/nn/optimizer"]
-    scheduler = config["/nn/scheduler"]
-
+def train_fn(
+    config: Config,
+    model,
+    dataloader,
+    criterion,
+    optimizer,
+    scheduler,
+    wandb_logger,
+    total_step,
+):
     # training settings
     device = config["/nn/device"]
     use_amp = config["/nn/fp16"]
@@ -101,7 +106,9 @@ def train_fn(config, model, wandb_logger, total_step):
             wandb_logger.log({"train_loss": loss, "lr": scheduler.get_last_lr()[0], "train_step": total_step})
 
         losses.append(float(loss))
-        iteration_bar.set_description(f"loss: {np.mean(losses):.4f} lr: {scheduler.get_last_lr()[0]:.6f}")
+        iteration_bar.set_description(
+            f"step: {total_step}, loss: {np.mean(losses):.4f} lr: {scheduler.get_last_lr()[0]:.6f}"
+        )
 
     loss = np.mean(losses)
     if not batch_scheduler:
@@ -110,7 +117,7 @@ def train_fn(config, model, wandb_logger, total_step):
     return {"loss": loss, "step": total_step}
 
 
-def valid_fn(config, model):
+def valid_fn(config: Config, model, dataloader):
     dataloader = config["/nn/dataloader/valid"]
     criterion = config["/nn/criterion"]
 
@@ -141,3 +148,24 @@ def valid_fn(config, model):
     outputs = list(itertools.chain.from_iterable(outputs))
     loss = np.mean(losses)
     return {"loss": loss, "outputs": outputs, "targets": targets}
+
+
+def inference_fn(config: Config, model):
+    device = config["/nn/device"]
+    dataloader = config["/nn/dataloader/test"]
+
+    model.eval()
+    model.to(device)
+    iteration_bar = tqdm(dataloader, total=len(dataloader))
+    outputs = []
+    for batch in iteration_bar:
+        batch = to_device(batch, device)
+
+        with torch.no_grad():
+            batch_outputs = model(batch)
+
+        batch_outputs = batch_outputs.cpu().detach().numpy()
+        outputs.append(batch_outputs)
+
+    outputs = list(itertools.chain.from_iterable(outputs))
+    return outputs

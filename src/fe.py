@@ -184,6 +184,11 @@ def main() -> None:
             n_uids=DEBUG_N_UIDS,
             random_state=config["/global/seed"],
         )
+        raw_test_df = convert_debug_train_df(
+            df=task_dataset.raw_test_data,
+            n_uids=DEBUG_N_UIDS,
+            random_state=config["/global/seed"],
+        )
 
     # add fold index
     raw_train_df = add_fold_index(config=config, df=raw_train_df)
@@ -197,7 +202,7 @@ def main() -> None:
     )
     test_feature_df = make_features(
         config=config,
-        df=task_dataset.raw_test_data,
+        df=raw_test_df,
         overwrite=True,
         name="test_feature_df",
     )

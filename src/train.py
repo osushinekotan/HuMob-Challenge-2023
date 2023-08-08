@@ -54,11 +54,12 @@ def calc_steps(
 def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feature_df: pd.DataFrame) -> Config:
     # update parameters
     num_training_steps, iters_per_epoch = calc_steps(
-        train_length=len(train_feature_df),
+        train_length=(train_feature_df["uid"].nunique()),
         batch_size=pre_eval_config["nn"]["dataloader"]["train"]["batch_size"],
         max_epochs=pre_eval_config["nn"]["max_epochs"],
         gradient_accumulation_steps=pre_eval_config["nn"]["gradient_accumulation_steps"],
     )
+    print(num_training_steps)
     pre_eval_config["nn"]["num_training_steps"] = num_training_steps
     pre_eval_config["nn"]["iters_per_epoch"] = iters_per_epoch
     pre_eval_config["nn"]["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -131,6 +132,12 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
     config = set_config(pre_eval_config, train_data, valid_data)
     metrics = config["/nn/metrics"]  # get metrics
     model = config["/nn/model"]
+    train_dataloader = config["/nn/dataloader/train"]
+    valid_dataloader = config["/nn/dataloader/valid"]
+    criterion = config["/nn/criterion"]
+    optimizer = config["/nn/optimizer"]
+    scheduler = config["/nn/scheduler"]
+
     max_epochs = pre_eval_config["nn"]["max_epochs"]
     out_dir = Path(config["/global/resources"]) / "output" / config["nn/out_dir"]
 
@@ -152,6 +159,10 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
         tr_output = train_fn(
             config=config,
             model=model,
+            dataloader=train_dataloader,
+            criterion=criterion,
+            optimizer=optimizer,
+            scheduler=scheduler,
             total_step=total_step,
             wandb_logger=wandb,
         )
@@ -159,7 +170,11 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
         total_step += step
 
         # valid
-        va_output = valid_fn(config=config, model=model)
+        va_output = valid_fn(
+            config=config,
+            model=model,
+            dataloader=valid_dataloader,
+        )
         eval_score = metrics(va_output["outputs"], va_output["targets"])
 
         # logs
@@ -182,12 +197,14 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
     wandb.finish(quiet=True)
     torch.cuda.empty_cache()
     gc.collect()
+    best_val_outputs = joblib.load(out_dir / f"{loop_name}.pkl")
+    return best_val_outputs
 
 
 def train_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
     num_fold = pre_eval_config["cv"]["num_fold"]
     valid_folds = pre_eval_config["cv"]["valid_folds"]
-
+    oof_outputs = []
     for i_fold in range(num_fold):
         if i_fold not in valid_folds:
             continue
@@ -196,21 +213,25 @@ def train_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
             train_feature_df = df[df["fold"] != i_fold].reset_index(drop=True)
             valid_feature_df = df[df["fold"] == i_fold].reset_index(drop=True)
 
-            train_loop(
+            best_outputs = train_loop(
                 pre_eval_config=pre_eval_config,
                 train_data=train_feature_df,
                 valid_data=valid_feature_df,
                 loop_name=f"fold_{i_fold}",
             )
+            oof_outputs.append(best_outputs)
+    return oof_outputs
 
 
 def main() -> None:
     pre_eval_config = load_yaml()
     seed_everything(pre_eval_config["global"]["seed"])
+    out_dir = Path(pre_eval_config["global"]["resources"]) / "output" / pre_eval_config["nn"]["out_dir"]
 
     feature_df = load_feature_df(pre_eval_config=pre_eval_config, name="train_feature_df")
     with logger.time_log("train_fold"):
-        train_fold(pre_eval_config, df=feature_df)
+        oof_outputs = train_fold(pre_eval_config, df=feature_df)
+    joblib.dump(oof_outputs, out_dir / "oof_outputs.pkl")
 
 
 if __name__ == "__main__":
