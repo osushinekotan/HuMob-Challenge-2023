@@ -141,6 +141,8 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
     optimizer = config["/nn/optimizer"]
     scheduler = config["/nn/scheduler"]
 
+    logger.debug(f"len_traindataloader : {len(train_dataloader)}, len_validdataloader : {len(valid_dataloader)}")
+
     max_epochs = pre_eval_config["nn"]["max_epochs"]
     out_dir = Path(config["/global/resources"]) / "output" / config["nn/out_dir"]
 
@@ -216,14 +218,16 @@ def train_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
             train_feature_df = df[df["fold"] != i_fold].reset_index(drop=True)
             valid_feature_df = df[df["fold"] == i_fold].reset_index(drop=True)
 
+            logger.debug(f"train_feature: {train_feature_df.shape}, valid_feature: {valid_feature_df.shape}")
+
             best_outputs = train_loop(
                 pre_eval_config=pre_eval_config,
                 train_data=train_feature_df,
                 valid_data=valid_feature_df,
                 loop_name=f"fold_{i_fold}",
             )
-            oof_outputs.append(best_outputs)
-    return np.concatenate(oof_outputs)
+            oof_outputs.append(best_outputs["outputs"])
+    return np.concatenate(oof_outputs, axis=0)
 
 
 def main() -> None:

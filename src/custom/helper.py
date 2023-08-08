@@ -151,7 +151,6 @@ def valid_fn(config: Config, model, dataloader):
         ]
     )
     outputs = np.concatenate(outputs)
-    print(targets.shape, outputs.shape)
     loss = np.mean(losses)
     return {"loss": loss, "outputs": outputs, "targets": targets}
 
