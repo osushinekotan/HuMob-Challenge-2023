@@ -55,8 +55,7 @@ nn:
     padding_value: "@/nn/padding_value"
 
   metrics:
-    type: MaskedMSEMetrics
-    padding_value: "@/nn/padding_value"
+    type: MSE
 
   dataset:
     train:

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 import joblib
+import numpy as np
 import pandas as pd
 import torch
 from custom.config_types import CONFIG_TYPES
@@ -107,7 +108,7 @@ def inference_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
                 loop_name=f"fold_{i_fold}",
             )
         outputs.append(i_outputs)
-    mean_outputs = [[sum(items) / len(items) for items in zip(*sub_list)] for sub_list in zip(*outputs)]
+    mean_outputs = np.mean(outputs, axis=0)
     return mean_outputs
 
 
@@ -120,7 +121,7 @@ def main():
     with logger.time_log("test_fold"):
         test_outputs = inference_fold(pre_eval_config, df=feature_df)
 
-    logger.debug(f"length0 : {len(test_outputs)}, length1: {len(test_outputs[0])}, length2: {len(test_outputs[0][1])}")
+    logger.debug(f"shape : {test_outputs.shape}")
     joblib.dump(test_outputs, out_dir / "test_outputs.pkl")
 
 

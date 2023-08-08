@@ -1,5 +1,3 @@
-import itertools
-
 import numpy as np
 import torch
 from pytorch_pfn_extras.config import Config
@@ -138,14 +136,22 @@ def valid_fn(config: Config, model, dataloader):
             loss = torch.div(loss, gradient_accumulation_steps)
 
         batch_outputs = batch_outputs.to("cpu").numpy()
-        outputs.append(batch_outputs)
+        for a_batch_outputs, a_length in zip(batch_outputs, batch["auxiliary_lengths"]):
+            outputs.append(a_batch_outputs[:a_length])
+
         losses.append(float(loss))
 
         iteration_bar.set_description(f"loss: {np.mean(losses):.4f}")
-    targets = list(
-        itertools.chain.from_iterable([batch["target_seqs"].numpy() for batch in dataloader])
-    )  # to store targets
-    outputs = list(itertools.chain.from_iterable(outputs))
+
+    targets = np.concatenate(
+        [
+            target_seqs[:target_length]
+            for batch in dataloader
+            for target_seqs, target_length in zip(batch["target_seqs"], batch["auxiliary_lengths"])
+        ]
+    )
+    outputs = np.concatenate(outputs)
+    print(targets.shape, outputs.shape)
     loss = np.mean(losses)
     return {"loss": loss, "outputs": outputs, "targets": targets}
 
@@ -165,7 +171,8 @@ def inference_fn(config: Config, model):
             batch_outputs = model(batch)
 
         batch_outputs = batch_outputs.cpu().detach().numpy()
-        outputs.append(batch_outputs)
+        for a_bach, a_length in zip(batch_outputs, batch["auxiliary_lengths"]):
+            outputs.append(a_bach[:a_length])
 
-    outputs = list(itertools.chain.from_iterable(outputs))
+    outputs = np.concatenate(outputs)
     return outputs

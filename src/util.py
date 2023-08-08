@@ -149,3 +149,10 @@ def seed_everything(seed: int | None = None) -> None:
         np.random.seed(seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
+
+
+def recursive_mean(lists):
+    if isinstance(lists[0], list):
+        return [recursive_mean(sub_lists) for sub_lists in zip(*lists)]
+    else:
+        return sum(lists) / len(lists)

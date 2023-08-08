@@ -223,7 +223,7 @@ def train_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
                 loop_name=f"fold_{i_fold}",
             )
             oof_outputs.append(best_outputs)
-    return oof_outputs
+    return np.concatenate(oof_outputs)
 
 
 def main() -> None:

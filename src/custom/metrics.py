@@ -1,6 +1,15 @@
 import torch
+from sklearn.metrics import mean_squared_error
 from torch import nn
 from torch.nn.utils.rnn import pad_sequence
+
+
+class MSE:
+    def __init__(self, squared=True):
+        self.squared = squared
+
+    def __call__(self, output, target):
+        return mean_squared_error(target, output, squared=self.squared)
 
 
 def pad_sequences_with_torch(sequences, padding_value):
