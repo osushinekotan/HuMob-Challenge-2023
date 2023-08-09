@@ -71,12 +71,10 @@ def set_config(pre_eval_config: dict, test_feature_df: pd.DataFrame) -> Config:
     return Config(pre_eval_config, types=CONFIG_TYPES)
 
 
-def inference_loop(pre_eval_config: dict, test_data: Any, loop_name: str) -> None:
+def inference_loop(pre_eval_config: dict, test_data: Any, loop_name: str, out_dir: Path) -> None:
     # eval config
     config = set_config(pre_eval_config, test_data)
     model = config["/nn/model"]
-
-    out_dir = Path(config["/global/resources"]) / "output" / config["nn/out_dir"]
     out_dir.mkdir(parents=True, exist_ok=True)
 
     model_path = out_dir / f"{loop_name}.pth"
@@ -92,7 +90,7 @@ def inference_loop(pre_eval_config: dict, test_data: Any, loop_name: str) -> Non
     return outputs
 
 
-def inference_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
+def inference_fold(pre_eval_config: dict, df: pd.DataFrame, out_dir: Path) -> None:
     num_fold = pre_eval_config["cv"]["num_fold"]
     valid_folds = pre_eval_config["cv"]["valid_folds"]
 
@@ -103,9 +101,7 @@ def inference_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
 
         with logger.time_log(f"fold {i_fold}"):
             i_outputs = inference_loop(
-                pre_eval_config=pre_eval_config,
-                test_data=df,
-                loop_name=f"fold_{i_fold}",
+                pre_eval_config=pre_eval_config, test_data=df, loop_name=f"fold_{i_fold}", out_dir=out_dir
             )
         outputs.append(i_outputs)
     mean_outputs = np.mean(outputs, axis=0)
@@ -115,11 +111,16 @@ def inference_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
 def main():
     pre_eval_config = load_yaml()
     seed_everything(pre_eval_config["global"]["seed"])
-    out_dir = Path(pre_eval_config["global"]["resources"]) / "output" / pre_eval_config["nn"]["out_dir"]
+    out_dir = (
+        Path(pre_eval_config["global"]["resources"])
+        / "output"
+        / pre_eval_config["nn"]["out_dir"]
+        / pre_eval_config["fe"]["dataset"]
+    )
 
     feature_df = load_feature_df(pre_eval_config=pre_eval_config, name="test_feature_df")
     with logger.time_log("test_fold"):
-        test_outputs = inference_fold(pre_eval_config, df=feature_df)
+        test_outputs = inference_fold(pre_eval_config, df=feature_df, out_dir=out_dir)
 
     logger.debug(f"shape : {test_outputs.shape}")
     joblib.dump(test_outputs, out_dir / "test_outputs.pkl")

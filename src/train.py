@@ -128,7 +128,7 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
     return Config(pre_eval_config, types=CONFIG_TYPES)
 
 
-def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_name: str) -> None:
+def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_name: str, out_dir: Path) -> None:
     # eval config
     config = set_config(pre_eval_config, train_data, valid_data)
 
@@ -140,16 +140,14 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
     criterion = config["/nn/criterion"]
     optimizer = config["/nn/optimizer"]
     scheduler = config["/nn/scheduler"]
+    max_epochs = pre_eval_config["nn"]["max_epochs"]
 
     logger.debug(f"len_traindataloader : {len(train_dataloader)}, len_validdataloader : {len(valid_dataloader)}")
-
-    max_epochs = pre_eval_config["nn"]["max_epochs"]
-    out_dir = Path(config["/global/resources"]) / "output" / config["nn/out_dir"]
 
     # setup
     wandb.init(
         project=config["/global/project"],
-        name=config["/nn/out_dir"],
+        name=f'{config["/nn/out_dir"]}_{config["/fe/dataset"]}',
         group=loop_name,
         job_type="train",
         anonymous=None,
@@ -180,6 +178,7 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
             model=model,
             dataloader=valid_dataloader,
         )
+        logger.debug(f'outputs: {va_output["outputs"].shape}, targets: {va_output["targets"].shape}')
         eval_score = metrics(va_output["outputs"], va_output["targets"])
 
         # logs
@@ -206,7 +205,7 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
     return best_val_outputs
 
 
-def train_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
+def train_fold(pre_eval_config: dict, df: pd.DataFrame, out_dir: Path) -> None:
     num_fold = pre_eval_config["cv"]["num_fold"]
     valid_folds = pre_eval_config["cv"]["valid_folds"]
     oof_outputs = []
@@ -225,6 +224,7 @@ def train_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
                 train_data=train_feature_df,
                 valid_data=valid_feature_df,
                 loop_name=f"fold_{i_fold}",
+                out_dir=out_dir,
             )
             oof_outputs.append(best_outputs["outputs"])
     return np.concatenate(oof_outputs, axis=0)
@@ -233,11 +233,16 @@ def train_fold(pre_eval_config: dict, df: pd.DataFrame) -> None:
 def main() -> None:
     pre_eval_config = load_yaml()
     seed_everything(pre_eval_config["global"]["seed"])
-    out_dir = Path(pre_eval_config["global"]["resources"]) / "output" / pre_eval_config["nn"]["out_dir"]
+    out_dir = (
+        Path(pre_eval_config["global"]["resources"])
+        / "output"
+        / pre_eval_config["nn"]["out_dir"]
+        / pre_eval_config["fe"]["dataset"]
+    )
 
     feature_df = load_feature_df(pre_eval_config=pre_eval_config, name="train_feature_df")
     with logger.time_log("train_fold"):
-        oof_outputs = train_fold(pre_eval_config, df=feature_df)
+        oof_outputs = train_fold(pre_eval_config, df=feature_df, out_dir=out_dir)
     joblib.dump(oof_outputs, out_dir / "oof_outputs.pkl")
 
 

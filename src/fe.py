@@ -188,7 +188,7 @@ def main() -> None:
         )
         raw_test_df = convert_debug_train_df(
             df=raw_test_df,
-            n_uids=10,
+            n_uids=100,
             random_state=config["/global/seed"],
         )
 
