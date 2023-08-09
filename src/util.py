@@ -1,10 +1,13 @@
 import gc
 import json
+import os
+import random
 import shutil
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import torch
 import yaml
 
 
@@ -137,3 +140,19 @@ def sort_df(df):
         .reset_index(drop=True)
         .drop("nunique_uid", axis=1)
     )
+
+
+def seed_everything(seed: int | None = None) -> None:
+    if seed is not None:
+        os.environ["PL_GLOBAL_SEED"] = str(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+
+def recursive_mean(lists):
+    if isinstance(lists[0], list):
+        return [recursive_mean(sub_lists) for sub_lists in zip(*lists)]
+    else:
+        return sum(lists) / len(lists)

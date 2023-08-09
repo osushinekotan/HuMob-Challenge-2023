@@ -1,55 +1,78 @@
 import numpy as np
 import torch
+from pytorch_pfn_extras.config import Config
 from torch.nn.utils.rnn import pad_sequence
 from tqdm import tqdm
 
 
 class PadSequenceCollateFn:
-    def __init__(self, is_train_mode=True):
+    def __init__(self, is_train_mode=True, padding_value=-1):
         self.is_train_mode = is_train_mode
+        self.padding_value = padding_value
 
     def __call__(self, batch):
         feature_seqs = [item["feature_seqs"] for item in batch]
-        lengths = [len(seq) for seq in feature_seqs]
+        auxiliary_seqs = [item["auxiliary_seqs"] for item in batch]
+        feature_lengths = [len(seq) for seq in feature_seqs]
+        auxiliary_lengths = [len(seq) for seq in auxiliary_seqs]
+
         feature_seqs_padded = pad_sequence(
-            [(seq) for seq in feature_seqs], batch_first=True
+            [(seq) for seq in feature_seqs],
+            batch_first=True,
+            padding_value=self.padding_value,
+        )  # (sequence_len, feature_dim)
+        auxiliary_seqs_padded = pad_sequence(
+            [(seq) for seq in auxiliary_seqs],
+            batch_first=True,
+            padding_value=self.padding_value,
         )  # (sequence_len, feature_dim)
 
         if not self.is_train_mode:
             return {
                 "feature_seqs": feature_seqs_padded,
-                "lengths": lengths,
+                "auxiliary_seqs": auxiliary_seqs_padded,
+                "feature_lengths": feature_lengths,
+                "auxiliary_lengths": auxiliary_lengths,
             }
 
         target_seqs = [item["target_seqs"] for item in batch]
         target_seqs_padded = pad_sequence(
-            [(seq) for seq in target_seqs], batch_first=True
+            [(seq) for seq in target_seqs],
+            batch_first=True,
+            padding_value=self.padding_value,
         )  # (sequence_len, target_dim)
         return {
             "feature_seqs": feature_seqs_padded,
+            "auxiliary_seqs": auxiliary_seqs_padded,
             "target_seqs": target_seqs_padded,
-            "lengths": lengths,
+            "feature_lengths": feature_lengths,
+            "auxiliary_lengths": auxiliary_lengths,
         }
 
 
 def to_device(batch, device):
     for k, v in batch.items():
-        batch[k] = v.to(device)
+        if not k.endswith("lengths"):
+            batch[k] = v.to(device)
     return batch
 
 
-def train_fn(config, wandb_logger):
-    model = config["/model"]
-    dataloader = config["/dataloader/train"]
-    criterion = config["/criterion"]
-    optimizer = config["/optimizer"]
-    scheduler = config["/scheduler"]
-
+def train_fn(
+    config: Config,
+    model,
+    dataloader,
+    criterion,
+    optimizer,
+    scheduler,
+    wandb_logger,
+    total_step,
+):
     # training settings
     device = config["/nn/device"]
     use_amp = config["/nn/fp16"]
     gradient_accumulation_steps = config["/nn/gradient_accumulation_steps"]
     clip_grad_norm = config["/nn/clip_grad_norm"]
+    batch_scheduler = config["/nn/batch_scheduler"]
 
     model.train()
     scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
@@ -61,33 +84,44 @@ def train_fn(config, wandb_logger):
 
         with torch.cuda.amp.autocast(enabled=use_amp):
             batch_outputs = model(batch)
-            loss = criterion(batch_outputs, batch)
+            loss = criterion(
+                batch_outputs,
+                batch["target_seqs"],
+                target_len=batch["auxiliary_lengths"],
+            )
             loss = torch.div(loss, gradient_accumulation_steps)
 
         scaler.scale(loss).backward()
-        if config.clip_grad_norm is not None:
+        if clip_grad_norm is not None:
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
 
         if (step + 1) % gradient_accumulation_steps == 0:
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
+            total_step += 1
 
-            if config.batch_scheduler:
+            if batch_scheduler:
                 scheduler.step()
 
-        wandb_logger.log({"train_loss": loss, "lr": scheduler.get_lr()[0]})
+        if wandb_logger is not None:
+            wandb_logger.log({"train_loss": loss, "lr": scheduler.get_last_lr()[0], "train_step": total_step})
+
         losses.append(float(loss))
-        iteration_bar.set_description(f"loss: {np.mean(losses):.4f} lr: {scheduler.get_lr()[0]:.6f}")
+        iteration_bar.set_description(
+            f"step: {total_step}, loss: {np.mean(losses):.4f} lr: {scheduler.get_last_lr()[0]:.6f}"
+        )
 
     loss = np.mean(losses)
-    return {"loss": loss, "step": step}
+    if not batch_scheduler:
+        scheduler.step()
+
+    return {"loss": loss, "step": total_step}
 
 
-def valid_fn(config):
-    model = config["/model"]
-    dataloader = config["/dataloader/valid"]
-    criterion = config["/criterion"]
+def valid_fn(config: Config, model, dataloader):
+    dataloader = config["/nn/dataloader/valid"]
+    criterion = config["/nn/criterion"]
 
     # training settings
     device = config["/nn/device"]
@@ -95,22 +129,53 @@ def valid_fn(config):
 
     model.eval()
     outputs, losses = [], []
-
+    targets = []
     iteration_bar = tqdm(enumerate(dataloader), total=len(dataloader))
     for _, batch in iteration_bar:
         batch = to_device(batch, device)
 
         with torch.no_grad():
             batch_outputs = model(batch)
-            loss = criterion(batch_outputs, batch)
+            loss = criterion(
+                batch_outputs,
+                batch["target_seqs"],
+                target_len=batch["auxiliary_lengths"],
+            )
             loss = torch.div(loss, gradient_accumulation_steps)
 
         batch_outputs = batch_outputs.to("cpu").numpy()
-        outputs.append(batch_outputs)
-        losses.append(float(loss))
+        for a_batch_outputs, a_length, a_batch_targets in zip(
+            batch_outputs, batch["auxiliary_lengths"], batch["target_seqs"]
+        ):
+            outputs.append(a_batch_outputs[:a_length])
+            targets.append(a_batch_targets[:a_length])
 
+        losses.append(float(loss))
         iteration_bar.set_description(f"loss: {np.mean(losses):.4f}")
 
     outputs = np.concatenate(outputs)
+    targets = np.concatenate(targets)
     loss = np.mean(losses)
-    return {"loss": loss, "outputs": outputs}
+    return {"loss": loss, "outputs": outputs, "targets": targets}
+
+
+def inference_fn(config: Config, model):
+    device = config["/nn/device"]
+    dataloader = config["/nn/dataloader/test"]
+
+    model.eval()
+    model.to(device)
+    iteration_bar = tqdm(dataloader, total=len(dataloader))
+    outputs = []
+    for batch in iteration_bar:
+        batch = to_device(batch, device)
+
+        with torch.no_grad():
+            batch_outputs = model(batch)
+
+        batch_outputs = batch_outputs.cpu().detach().numpy()
+        for a_bach, a_length in zip(batch_outputs, batch["auxiliary_lengths"]):
+            outputs.append(a_bach[:a_length])
+
+    outputs = np.concatenate(outputs)
+    return outputs

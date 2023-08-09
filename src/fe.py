@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Callable
 
 import joblib
-import numpy as np
 import pandas as pd
 from custom.config_types import CONFIG_TYPES
 from logger import Logger
@@ -19,10 +18,11 @@ config = Config(pre_eval_config, types=CONFIG_TYPES)
 
 # set const
 DEBUG = config["/global/debug"]
+DEBUG_N_UIDS = 100
 
 
 class TaskDatset:
-    def __init__(self, config, overwrite=False) -> None:
+    def __init__(self, config: Config, overwrite: bool = False) -> None:
         self.config = config
         self.dirpath = Path(config["/global/resources"]) / "input"
         self.dataset_name = config["/fe/dataset"]
@@ -33,35 +33,48 @@ class TaskDatset:
         self.overwrite = overwrite
 
     @property
-    def raw_train_data(self):
+    def raw_train_data(self) -> pd.DataFrame:
         if self.raw_train_filepath.is_file() and (not self.overwrite):
+            logger.info(f"read_parquet : {self.raw_train_filepath}")
             return pd.read_parquet(self.raw_train_filepath)
 
-        raw_train_df = self.raw_data.query("x != 999").reset_index(drop=True)
-        raw_train_df.to_parquet(self.raw_train_filepath)
+        with logger.time_log(target="raw_train_data"):
+            uids = self.raw_data.query("x == 999")["uid"].unique()
+            raw_train_df = self.raw_data[~self.raw_data["uid"].isin(uids)].reset_index(drop=True)
+            raw_train_df.to_parquet(self.raw_train_filepath)
+
         return raw_train_df
 
     @property
-    def raw_test_data(self):
+    def raw_test_data(self) -> pd.DataFrame:
         if self.raw_test_filepath.is_file() and (not self.overwrite):
+            logger.info(f"read_parquet : {self.raw_test_filepath}")
             return pd.read_parquet(self.raw_test_filepath)
 
-        raw_test_df = self.raw_data.query("x == 999")
-        raw_test_df.to_parquet(self.raw_test_filepath).reset_index(drop=True)
+        with logger.time_log(target="raw_test_data"):
+            uids = self.raw_data.query("x == 999")["uid"].unique()
+            raw_test_df = self.raw_data[self.raw_data["uid"].isin(uids)].reset_index(drop=True)
+            raw_test_df.to_parquet(self.raw_test_filepath)
         return raw_test_df
 
     @cached_property
-    def raw_data(self):
+    def raw_data(self) -> pd.DataFrame:
         return read_parquet_from_csv(
             filepath=self.dirpath / f"{self.dataset_name}.csv.gz",
             dirpath=self.dirpath,
             process_fns=[reduce_mem_usage, sort_df_numpy],
-            overwrite=self.config["/fe/overwrite"],
+            overwrite=False,
         )
 
     @property
-    def poi_data(self):
+    def poi_data(self) -> pd.DataFrame:
         return read_parquet_from_csv(filepath=self.dirpath / "cell_POIcat.csv.gz", dirpath=self.dirpath)
+
+
+def convert_debug_train_df(df: pd.DataFrame, n_uids: int = 100, random_state: int | None = None):
+    user_ids = df["uid"].sample(n_uids, random_state=random_state).tolist()
+    debug_df = df[df["uid"].isin(user_ids)].reset_index(drop=True)
+    return debug_df
 
 
 def read_parquet_from_csv(
@@ -73,7 +86,7 @@ def read_parquet_from_csv(
     name = filepath.name.split(".")[0]
     parquet_filepath = dirpath / f"{name}.parquet"
     if parquet_filepath.is_file() and (not overwrite):
-        logger.info(f"load parquet file ({str(filepath)})")
+        logger.info(f"read_parquet : ({str(filepath)})")
         return pd.read_parquet(parquet_filepath)
 
     logger.info(f"load csv & convert to parquet ({str(filepath)})")
@@ -84,6 +97,7 @@ def read_parquet_from_csv(
             logger.info(f"excute {fn.__name__}")
             df = fn(df)
 
+    df = df.reset_index(drop=True)
     df.to_parquet(parquet_filepath)
     return df
 
@@ -120,69 +134,88 @@ def cache(out_dir: Path, overwrite: bool = False, no_cache: bool = False):
     return decorator
 
 
-def make_features(config, df, overwrite=False):
-    extractors = config["fe/extractors"]
-    out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"]
+def make_features(
+    config: Config,
+    df: pd.DataFrame,
+    overwrite: bool = False,
+    no_cache: bool = False,
+    name: str = "",
+) -> pd.DataFrame:
+    extractors = config["/fe/extractors"]
+    dataset_name = config["/fe/dataset"]
 
-    @cache(out_dir=out_dir, overwrite=overwrite)
+    # set dir
+    out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"] / dataset_name
+    logger.debug(f"make_features: overwrite={overwrite}, no_cache={no_cache}")
+
+    # cache for final output
+    filepath_for_features_df = out_dir / f"{name}.pkl"
+    if filepath_for_features_df.is_file() and (not overwrite):
+        logger.info(f"load : {filepath_for_features_df}")
+        return joblib.load(filepath_for_features_df)
+
+    # feature engineering
+    @cache(out_dir=out_dir, overwrite=overwrite, no_cache=no_cache)
     def _extract(df, extractor):
         with logger.time_log(target=extractor.__class__.__name__):
             return extractor(df)
 
     features_df = pd.concat([df] + [_extract(df, extractor) for extractor in extractors], axis=1)
+    joblib.dump(features_df, filepath_for_features_df)
     return features_df
 
 
-class TrainValidDataset:
-    def __init__(self, config, uids, overwrite=True):
-        self.config = config
-        out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"]
-        self.train_filepath = out_dir / "train_feaures_df.pkl"
-        self.valid_filepath = out_dir / "valid_features_df.pkl"
+def add_fold_index(config: Config, df: pd.DataFrame) -> pd.DataFrame:
+    with logger.time_log("add_fold"):
+        df["fold"] = -1
+        cv = config["/cv/strategy"]
+        for i_fold, (tr_idx, va_idx) in enumerate(cv.split(X=df, y=df["fold"], groups=df["uid"])):
+            df.loc[va_idx, "fold"] = i_fold
+    return df
 
-        self.uids = uids
-        self.overwrite = overwrite
 
-    @cached_property
-    def valid_uids(self):
-        valid_uids = (
-            pd.Series(np.unique(self.uids))
-            .sample(self.config["/cv/n_valid_uids"], random_state=self.config["/global/seed"])
-            .tolist()
+def main() -> None:
+    # load data
+    task_dataset = TaskDatset(config=config, overwrite=True)
+    raw_train_df = task_dataset.raw_train_data
+    raw_test_df = task_dataset.raw_test_data
+
+    if DEBUG:
+        raw_train_df = convert_debug_train_df(
+            df=raw_train_df,
+            n_uids=DEBUG_N_UIDS,
+            random_state=config["/global/seed"],
         )
-        return valid_uids
+        raw_test_df = convert_debug_train_df(
+            df=raw_test_df,
+            n_uids=100,
+            random_state=config["/global/seed"],
+        )
 
-    def load_valid_data(self, df):
-        if self.valid_filepath.is_file() and (not self.overwrite):
-            return joblib.load(self.train_filepath)
+    # add fold index
+    raw_train_df = add_fold_index(config=config, df=raw_train_df)
 
-        valid_df = df[df["uid"].isin(self.valid_uids)].reset_index(drop=True)
-        joblib.dump(valid_df, self.valid_filepath)
-        return valid_df
+    # feature engineering
+    train_feature_df = make_features(
+        config=config,
+        df=raw_train_df,
+        overwrite=True,
+        name="train_feature_df",
+    )
+    test_feature_df = make_features(
+        config=config,
+        df=raw_test_df,
+        overwrite=True,
+        name="test_feature_df",
+    )
 
-    def load_train_data(self, df):
-        if self.train_filepath.is_file() and (not self.overwrite):
-            return joblib.load(self.train_filepath)
+    # check
+    logger.debug(f"train_feature_df : {train_feature_df.shape}, test_feature_df : {test_feature_df.shape}")
+    logger.debug(f"train_uids : {train_feature_df['uid'].nunique()}, test_uids : {test_feature_df['uid'].nunique()}")
 
-        train_df = df[~df["uid"].isin(self.valid_uids)].reset_index(drop=True)
-        joblib.dump(train_df, self.train_filepath)
-        return train_df
-
-
-# load data
-task_dataset = TaskDatset(config=config, overwrite=True)
-raw_train_df = task_dataset.raw_train_data
-poi_df = task_dataset.poi_data
-
-if DEBUG:
-    user_ids = raw_train_df["uid"].sample(100, random_state=config["/global/seed"]).tolist()
-    raw_train_df = raw_train_df[raw_train_df["uid"].isin(user_ids)].reset_index(drop=True)
-
-# feature engineering
-train_df = make_features(config=config, df=raw_train_df, overwrite=True)
-train_valid_dataset = TrainValidDataset(config=config, uids=train_df["uid"], overwrite=True)
-valid_df = train_valid_dataset.load_valid_data(df=train_df)
-train_df = train_valid_dataset.load_train_data(df=train_df)
+    assert len(train_feature_df.query("x == 999")) == 0
+    assert test_feature_df.query("x == 999")["uid"].nunique() == test_feature_df["uid"].nunique()
 
 
-print("OK")
+if __name__ == "__main__":
+    main()

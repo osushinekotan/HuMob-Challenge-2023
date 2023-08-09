@@ -1,6 +1,7 @@
 global:
+  project: "HuMob-Challenge-2023"
   seed: 8823
-  debug: False
+  debug: True
   resources: "/workspace/resources"
 
 fe:
@@ -14,87 +15,113 @@ fe:
         group_values: ["t", "d"],
         intervals: [1, 2],
       }
+    - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] }
 
 cv:
-  n_valid_uids: 10
-  n_splits: 5
+  num_fold: 5
   valid_folds: [0, 1, 2]
+  strategy:
+    type: StratifiedGroupKFold
+    n_splits: "@/cv/num_fold"
+    shuffle: True
+    random_state: "@/global/seed"
 
 nn:
+  out_dir: "001/models"
   device: ???
+  padding_value: -999
   max_epochs: 2
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 1
+  clip_grad_norm: 1000
   fp16: False
-
-model:
-  type: CustomLSTMModelV1
-  input_size: ???
-  hidden_size: 2
-  num_layers: 1
-  output_size: ???
-
-dataset:
-  train:
-    type: TrainDataset
-    feature_seqs: ???
-    target_seqs: ???
-  valid:
-    type: TrainDataset
-    feature_seqs: ???
-    target_seqs: ???
-  test:
-    type: TestDataset
-    feature_seqs: ???
-
-dataloader:
-  collate_fn: PadSequenceCollateFn
-
-  train:
-    type: DataLoader
-    dataset: "@/dataset/train"
-    collate_fn:
-      type: "@/dataloader/collate_fn"
-      is_train_model: True
-    batch_size: 2
-    num_workers: 4
-    shuffle: True
-    pin_memory: True
-    drop_last: True
-
-  valid:
-    type: DataLoader
-    dataset: "@/dataset/valid"
-    collate_fn:
-      type: "@/dataloader/collate_fn"
-      is_train_model: True
-    batch_size: 2
-    num_workers: 4
-    shuffle: True
-    pin_memory: True
-    drop_last: True
-
-  test:
-    type: DataLoader
-    dataset: "@/dataset/test"
-    collate_fn:
-      type: "@/dataloader/collate_fn"
-      is_train_model: False
-    batch_size: 2
-    num_workers: 4
-    shuffle: False
-    pin_memory: True
-    drop_last: False
-
-optimizer:
-  type: AdamW
-  params: { type: method_call, obj: "@/model", method: parameters }
-  lr: 2.0e-4
-  weight_decay: 1.0e-2
-  eps: 1.0e-6
-  betas: [0.9, 0.999]
-
-scheduler:
-  type: get_cosine_schedule_with_warmup
-  optimizer: "@/optimizer"
-  num_warmup_steps: 0
+  batch_scheduler: True
+  iters_per_epoch: ???
   num_training_steps: ???
+
+  feature:
+    feature_names: ???
+    auxiliary_names: ["t", "d"]
+    target_names: ["x", "y"]
+
+  model:
+    type: CustomLSTMModelV1
+    input_size1: ???
+    input_size2: ???
+    hidden_size: 2
+    output_size: ???
+
+  criterion:
+    type: SeqMSELoss
+
+  metrics:
+    type: MSE
+    higher_is_better: True
+
+  dataset:
+    train:
+      type: TrainDataset
+      feature_seqs: ???
+      auxiliary_seqs: ???
+      target_seqs: ???
+    valid:
+      type: TrainDataset
+      feature_seqs: ???
+      auxiliary_seqs: ???
+      target_seqs: ???
+    test:
+      type: TestDataset
+      feature_seqs: ???
+      auxiliary_seqs: ???
+
+  dataloader:
+    train:
+      type: DataLoader
+      dataset: "@/nn/dataset/train"
+      collate_fn:
+        type: PadSequenceCollateFn
+        is_train_mode: True
+        padding_value: "@/nn/padding_value"
+      batch_size: 2
+      num_workers: 4
+      shuffle: True
+      pin_memory: True
+      drop_last: True
+    valid:
+      type: DataLoader
+      dataset: "@/nn/dataset/valid"
+      collate_fn:
+        type: PadSequenceCollateFn
+        is_train_mode: True
+        padding_value: "@/nn/padding_value"
+      batch_size: 2
+      num_workers: 4
+      shuffle: True
+      pin_memory: True
+      drop_last: True
+    test:
+      type: DataLoader
+      dataset: "@/nn/dataset/test"
+      collate_fn:
+        type: PadSequenceCollateFn
+        is_train_mode: False
+        padding_value: "@/nn/padding_value"
+      batch_size: 2
+      num_workers: 4
+      shuffle: False
+      pin_memory: True
+      drop_last: False
+
+  optimizer:
+    type: AdamW
+    params: { type: method_call, obj: "@/nn/model", method: parameters }
+    lr: 2.0e-4
+    weight_decay: 1.0e-2
+    eps: 1.0e-6
+    betas: [0.9, 0.999]
+
+  scheduler:
+    type: get_cosine_schedule_with_warmup
+    optimizer: "@/nn/optimizer"
+    num_warmup_steps: 0
+    num_training_steps: "@/nn/num_training_steps"
+    num_cycles: 0
