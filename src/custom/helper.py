@@ -84,7 +84,11 @@ def train_fn(
 
         with torch.cuda.amp.autocast(enabled=use_amp):
             batch_outputs = model(batch)
-            loss = criterion(batch_outputs, batch["target_seqs"])
+            loss = criterion(
+                batch_outputs,
+                batch["target_seqs"],
+                target_len=batch["auxiliary_lengths"],
+            )
             loss = torch.div(loss, gradient_accumulation_steps)
 
         scaler.scale(loss).backward()
@@ -132,7 +136,11 @@ def valid_fn(config: Config, model, dataloader):
 
         with torch.no_grad():
             batch_outputs = model(batch)
-            loss = criterion(batch_outputs, batch["target_seqs"])
+            loss = criterion(
+                batch_outputs,
+                batch["target_seqs"],
+                target_len=batch["auxiliary_lengths"],
+            )
             loss = torch.div(loss, gradient_accumulation_steps)
 
         batch_outputs = batch_outputs.to("cpu").numpy()

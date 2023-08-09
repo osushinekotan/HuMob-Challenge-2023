@@ -1,7 +1,7 @@
 from custom.dataset import TestDataset, TrainDataset
 from custom.feature.feature_extractor import GroupedDiffFeatureExtractor, RawFeatureExtractor
 from custom.helper import PadSequenceCollateFn
-from custom.metrics import MSE, MaskedMSELoss, MaskedMSEMetrics
+from custom.metrics import MSE, SeqMSELoss
 from custom.model import CustomLSTMModelV1
 from sklearn.model_selection import StratifiedGroupKFold
 from torch import nn
@@ -32,7 +32,6 @@ CONFIG_TYPES = dict(
     # loss
     CrossEntropyLoss=nn.CrossEntropyLoss,
     MSELoss=nn.MSELoss,
-    MaskedMSELoss=MaskedMSELoss,
-    MaskedMSEMetrics=MaskedMSEMetrics,
+    SeqMSELoss=SeqMSELoss,
     MSE=MSE,
 )

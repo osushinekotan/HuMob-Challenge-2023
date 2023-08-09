@@ -51,11 +51,11 @@ nn:
     output_size: ???
 
   criterion:
-    type: MaskedMSELoss
-    padding_value: "@/nn/padding_value"
+    type: SeqMSELoss
 
   metrics:
     type: MSE
+    higher_is_better: True
 
   dataset:
     train:
