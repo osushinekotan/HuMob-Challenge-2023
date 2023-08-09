@@ -746,6 +746,23 @@ ssh = ["paramiko"]
 tqdm = ["tqdm"]
 
 [[package]]
+name = "geobleu"
+version = "0.3"
+description = ""
+optional = false
+python-versions = "*"
+files = []
+develop = true
+
+[package.dependencies]
+numpy = "*"
+scipy = "*"
+
+[package.source]
+type = "directory"
+url = "geobleu"
+
+[[package]]
 name = "gitdb"
 version = "4.0.10"
 description = "Git Object Database"
@@ -3539,4 +3556,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "a03a3a46599bd898f6a2a7a091e8a1c846fa4614bef4b0c7890f2d9f8ece74ba"
+content-hash = "dc9898c3a259c4fac72887f50ecd315b8d69dbdde11d17426737160b57a91ee6"
