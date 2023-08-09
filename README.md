@@ -5,7 +5,8 @@
 - data description : https://arxiv.org/pdf/2307.03401.pdf
 - metrics repository : https://github.com/yahoojapan/geobleu
     ```
-    git submodule add git@github.com:yahoojapan/geobleu.git
+    git submodule add git@github.com:yahoojapan/geobleu.git  # submodule or
+    git clone git@github.com:yahoojapan/geobleu.git
     ```
 
 ## Script
