@@ -215,6 +215,7 @@ def run() -> None:
 
     assert len(train_feature_df.query("x == 999")) == 0
     assert test_feature_df.query("x == 999")["uid"].nunique() == test_feature_df["uid"].nunique()
+    logger.debug(f"\nfeatures\n\n{train_feature_df}")
 
 
 if __name__ == "__main__":
