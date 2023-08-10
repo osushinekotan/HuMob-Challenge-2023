@@ -127,6 +127,16 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
     return Config(pre_eval_config, types=CONFIG_TYPES)
 
 
+def judge_best_or_not(best_score, eval_score):
+    if best_score == -np.inf:
+        return True
+
+    for k in eval_score.keys():
+        if best_score[k] > eval_score[k]:
+            return False
+    return True
+
+
 def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_name: str, out_dir: Path) -> None:
     # eval config
     config = set_config(pre_eval_config, train_data, valid_data)
@@ -179,21 +189,30 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
             dataloader=valid_dataloader,
         )
         logger.debug(f'outputs: {va_output["outputs"].shape}, targets: {va_output["targets"].shape}')
-        eval_score = metrics(va_output["outputs"], va_output["targets"])
+        with logger.time_log("calc metrics"):
+            eval_score = metrics(
+                output=va_output["outputs"],
+                target=va_output["targets"],
+                info=valid_data[["d", "t"]].query("d >= 60").to_numpy(),
+            )
 
         # logs
         logs = {
             "epoch": epoch,
-            "eval_score": float(eval_score),
             "train_loss_epoch": loss.item(),
             "valid_loss_epoch": va_output["loss"].item(),
         }
+        if isinstance(eval_score, dict):
+            logs = {**logs, **eval_score}  # update
+        else:
+            logs["eval_score"] = eval_score
+
         logger.info(logs)
         wandb.log(logs)
 
-        if best_score < eval_score:
+        if judge_best_or_not(best_score=best_score, eval_score=eval_score):
             best_score = eval_score
-            logger.info(f"epoch {epoch} - best score: {best_score:.4f} model 🌈")
+            logger.info(f"epoch {epoch} - best score: {best_score} model 🌈")
 
             torch.save(model.state_dict(), out_dir / f"{loop_name}.pth")  # save model weight
             joblib.dump(va_output, out_dir / f"{loop_name}.pkl")  # save outputs
