@@ -4,17 +4,22 @@ import pandas as pd
 class GroupedDiffFeatureExtractor:
     def __init__(
         self,
-        group_key: str = "uid",
+        group_key: str | list = "uid",
         group_values: list[str] = ["t", "d"],
         intervals: list[int] = [1, 2],
     ):
         self.group_key = group_key
         self.group_values = group_values
         self.intervals = intervals
+        if isinstance(group_key, list):
+            self.group_key_name = "_".join(group_key)
+        else:
+            self.group_key_name = group_key
 
     def __call__(self, df):
         cols = [
-            {v: f"{v}_grpby_{self.group_key}_diff_{interval}" for v in self.group_values} for interval in self.intervals
+            {v: f"{v}_grpby_{self.group_key_name}_diff_{interval}" for v in self.group_values}
+            for interval in self.intervals
         ]
         out_df = pd.concat(
             [

@@ -21,6 +21,8 @@ class MSEMetric:
 
 class GeobleuMetric:
     def __init__(self, processes=3) -> None:
+        # dtw_score : smaller is better
+        # geobleu_score : larger is better
         self.processes = processes
 
     def __call__(self, output, target, **kwargs) -> Any:
@@ -29,7 +31,7 @@ class GeobleuMetric:
 
         geobleu_score = geobleu.calc_geobleu(generated, reference, processes=self.processes)
         dtw_score = geobleu.calc_dtw(generated, reference, processes=self.processes)
-        return {"geobleu_score": geobleu_score, "dtw_score": dtw_score}
+        return {"geobleu_score": geobleu_score, "dtw_score": -dtw_score}
 
 
 class SeqMSELoss(nn.MSELoss):

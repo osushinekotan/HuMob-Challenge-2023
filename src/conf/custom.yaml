@@ -12,14 +12,20 @@ fe:
     - {
         type: GroupedDiffFeatureExtractor,
         group_key: uid,
-        group_values: ["t", "d"],
-        intervals: [1, 2],
+        group_values: ["d"],
+        intervals: [1],
+      }
+    - {
+        type: GroupedDiffFeatureExtractor,
+        group_key: ["uid", "d"],
+        group_values: ["t"],
+        intervals: [1],
       }
     - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] }
 
 cv:
   num_fold: 5
-  valid_folds: [2]
+  valid_folds: [0]
   strategy:
     type: StratifiedGroupKFold
     n_splits: "@/cv/num_fold"
@@ -55,7 +61,7 @@ nn:
 
   metrics:
     type: GeobleuMetric
-    processes: 3
+    processes: 6
 
   dataset:
     train:
