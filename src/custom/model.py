@@ -32,9 +32,6 @@ class CustomLSTMModelV1(nn.Module):
             enforce_sorted=False,
         )
         x1, (hn_1, cn_1) = self.lstm1(s1)
-        # Considering that LSTM is bidirectional, we need to reshape the states for lstm2
-        hn_1 = hn_1.view(1, -1, 2 * self.hidden_size)
-        cn_1 = cn_1.view(1, -1, 2 * self.hidden_size)
 
         # Use the final hidden and cell state of lstm1 as initial state for lstm2
         x2, _ = self.lstm2(s2, (hn_1, cn_1))
