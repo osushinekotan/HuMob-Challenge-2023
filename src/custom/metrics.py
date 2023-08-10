@@ -1,9 +1,14 @@
+from typing import Any
+
+import numpy as np
 import torch
 from sklearn.metrics import mean_squared_error
 from torch import nn
 
+import geobleu
 
-class MSE:
+
+class MSEMetric:
     def __init__(self, squared=True, higher_is_better=True):
         self.squared = squared
         self.higher_is_better = higher_is_better
@@ -12,6 +17,19 @@ class MSE:
         score = mean_squared_error(target, output, squared=self.squared)
         score = -score if self.higher_is_better else score
         return score
+
+
+class GeobleuMetric:
+    def __init__(self, processes=3) -> None:
+        self.processes = processes
+
+    def __call__(self, output, target, **kwargs) -> Any:
+        generated = np.concatenate([kwargs["info"], output], axis=1).tolist()
+        reference = np.concatenate([kwargs["info"], target], axis=1).tolist()
+
+        geobleu_score = geobleu.calc_geobleu(generated, reference, processes=self.processes)
+        dtw_score = geobleu.calc_dtw(generated, reference, processes=self.processes)
+        return {"geobleu_score": geobleu_score, "dtw_score": dtw_score}
 
 
 class SeqMSELoss(nn.MSELoss):

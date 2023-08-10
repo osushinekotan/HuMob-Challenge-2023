@@ -19,7 +19,7 @@ fe:
 
 cv:
   num_fold: 5
-  valid_folds: [0, 1, 2]
+  valid_folds: [2]
   strategy:
     type: StratifiedGroupKFold
     n_splits: "@/cv/num_fold"
@@ -54,8 +54,8 @@ nn:
     type: SeqMSELoss
 
   metrics:
-    type: MSE
-    higher_is_better: True
+    type: GeobleuMetric
+    processes: 3
 
   dataset:
     train:
@@ -97,7 +97,7 @@ nn:
       num_workers: 4
       shuffle: True
       pin_memory: True
-      drop_last: True
+      drop_last: False
     test:
       type: DataLoader
       dataset: "@/nn/dataset/test"
