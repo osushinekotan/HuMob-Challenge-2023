@@ -12,10 +12,10 @@ class CustomLSTMModelV1(nn.Module):
         super().__init__()
         self.hidden_size = hidden_size
 
-        self.lstm1 = nn.LSTM(input_size1, hidden_size, batch_first=True)
-        self.lstm2 = nn.LSTM(input_size2, hidden_size, batch_first=True)
+        self.lstm1 = nn.LSTM(input_size1, hidden_size, batch_first=True, bidirectional=True)
+        self.lstm2 = nn.LSTM(input_size2, hidden_size, batch_first=True, bidirectional=True)
 
-        self.out = nn.Linear(hidden_size, output_size)
+        self.out = nn.Linear(hidden_size * 2, output_size)
 
     def forward(self, batch):
         # to variable length
@@ -32,6 +32,9 @@ class CustomLSTMModelV1(nn.Module):
             enforce_sorted=False,
         )
         x1, (hn_1, cn_1) = self.lstm1(s1)
+        # Considering that LSTM is bidirectional, we need to reshape the states for lstm2
+        hn_1 = hn_1.view(1, -1, 2 * self.hidden_size)
+        cn_1 = cn_1.view(1, -1, 2 * self.hidden_size)
 
         # Use the final hidden and cell state of lstm1 as initial state for lstm2
         x2, _ = self.lstm2(s2, (hn_1, cn_1))
