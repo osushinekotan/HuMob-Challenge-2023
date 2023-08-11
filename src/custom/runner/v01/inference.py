@@ -36,6 +36,7 @@ def make_sequences(df: pd.DataFrame, group_key: str, group_values: list[str]) ->
 def set_config(pre_eval_config: dict, test_feature_df: pd.DataFrame) -> Config:
     # update parameters
     pre_eval_config["nn"]["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.debug(f'device : {pre_eval_config["nn"]["device"]}' )
 
     # set feature names
     feature_names = pre_eval_config["nn"]["feature"]["feature_names"]

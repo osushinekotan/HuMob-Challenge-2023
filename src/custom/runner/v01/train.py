@@ -63,6 +63,7 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
     pre_eval_config["nn"]["num_training_steps"] = num_training_steps
     pre_eval_config["nn"]["iters_per_epoch"] = iters_per_epoch
     pre_eval_config["nn"]["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.debug(f'device : {pre_eval_config["nn"]["device"]}' )
 
     # set feature names
     feature_names = pre_eval_config["nn"]["feature"]["feature_names"]
