@@ -36,7 +36,7 @@ nn:
   out_dir: "001/models"
   device: ???
   padding_value: -999
-  max_epochs: 100
+  max_epochs: 2
   gradient_accumulation_steps: 1
   clip_grad_norm: 1000
   fp16: False
