@@ -50,8 +50,11 @@ class GeobleuMetric:
 
         with logger.time_log("geobleu"):
             geobleu_score = geobleu.calc_geobleu(generated, reference, processes=self.processes)
+            logger.info(f"score : {geobleu_score:.6f}")
         with logger.time_log("dtw"):
             dtw_score = geobleu.calc_dtw(generated, reference, processes=self.processes)
+            logger.info(f"score : {dtw_score:.6f}")
+            
         return {"geobleu_score": geobleu_score, "dtw_score": -dtw_score}
 
 
