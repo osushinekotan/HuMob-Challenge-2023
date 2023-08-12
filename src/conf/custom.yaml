@@ -62,7 +62,7 @@ nn:
 
   metrics:
     type: GeobleuMetric
-    processes: 6
+    processes: 2
 
   dataset:
     train:
