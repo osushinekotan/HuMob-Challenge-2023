@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Callable
 
 import joblib
+import numpy as np
 import pandas as pd
 from custom.config_types import CONFIG_TYPES
 from logger import Logger
@@ -126,6 +127,22 @@ def cache(out_dir: Path, overwrite: bool = False, no_cache: bool = False):
     return decorator
 
 
+def add_original_raw_targets(df: pd.DataFrame) -> pd.DataFrame:
+    df["original_x"] = df["x"].copy()
+    df["original_y"] = df["y"].copy()
+    return df
+
+
+def transform_regression_taget(config: Config, df: pd.DataFrame) -> pd.DataFrame:
+    target_mask = df["original_x"] != 999
+    if config["/fe/regression_taget_transform"] == "log":
+        df.loc[target_mask, ["x", "y"]] = np.log(df.loc[target_mask, ["original_x", "original_y"]])
+        return df
+
+    else:
+        raise NotImplementedError()
+
+
 def make_features(
     config: Config,
     df: pd.DataFrame,
@@ -192,6 +209,10 @@ def run() -> None:
             random_state=config["/global/seed"],
         )
 
+    # copy original target
+    raw_train_df = add_original_raw_targets(raw_train_df)
+    raw_test_df = add_original_raw_targets(raw_test_df)
+
     # add fold index
     raw_train_df = add_fold_index(config=config, df=raw_train_df)
 
@@ -208,6 +229,10 @@ def run() -> None:
         overwrite=True,
         name="test_feature_df",
     )
+
+    # target enginineering
+    train_feature_df = transform_regression_taget(config=Config, df=train_feature_df)
+    test_feature_df = transform_regression_taget(config=Config, df=test_feature_df)
 
     # check
     logger.debug(f"train_feature_df : {train_feature_df.shape}, test_feature_df : {test_feature_df.shape}")

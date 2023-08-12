@@ -21,7 +21,11 @@ fe:
         group_values: ["t"],
         intervals: [1],
       }
-    - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] }
+    - {
+        type: RawFeatureExtractor,
+        use_columns: ["d", "t", "x", "y", "original_x", "original_y"],
+      }
+  regression_target_transform: log
 
 cv:
   num_fold: 5

@@ -63,7 +63,7 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
     pre_eval_config["nn"]["num_training_steps"] = num_training_steps
     pre_eval_config["nn"]["iters_per_epoch"] = iters_per_epoch
     pre_eval_config["nn"]["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.debug(f'device : {pre_eval_config["nn"]["device"]}' )
+    logger.debug(f'device : {pre_eval_config["nn"]["device"]}')
 
     # set feature names
     feature_names = pre_eval_config["nn"]["feature"]["feature_names"]
@@ -131,7 +131,7 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
     return Config(pre_eval_config, types=CONFIG_TYPES)
 
 
-def judge_best_or_not(best_score, eval_score):
+def judge_best_or_not(best_score: dict | float, eval_score: dict) -> bool:
     if best_score == -np.inf:
         return True
 
@@ -139,6 +139,21 @@ def judge_best_or_not(best_score, eval_score):
         if best_score[k] > eval_score[k]:
             return False
     return True
+
+
+def get_wandb_run_name(config: Config) -> str:
+    name = f'{config["/nn/out_dir"]}_{config["/fe/dataset"]}'
+    name = f"debug_{name}" if config["global/debug"] else name
+    return name
+
+
+def retransform_regression_taget(config: Config, outputs: np.ndarray) -> np.ndarray:
+    if config["/fe/regression_taget_transform"] == "log":
+        outputs = np.exp(outputs).astype(int)
+        return outputs
+
+    else:
+        raise NotImplementedError()
 
 
 def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_name: str, out_dir: Path) -> None:
@@ -161,7 +176,7 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
     # setup
     wandb.init(
         project=config["/global/project"],
-        name=f'{config["/nn/out_dir"]}_{config["/fe/dataset"]}',
+        name=get_wandb_run_name(config),
         group=loop_name,
         job_type="train",
         anonymous=None,
@@ -192,11 +207,11 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
             model=model,
             dataloader=valid_dataloader,
         )
-        logger.debug(f'outputs: {va_output["outputs"].shape}, targets: {va_output["targets"].shape}')
+        logger.debug(f'outputs: {va_output["outputs"].shape}')
         with logger.time_log("calc metrics"):
             eval_score = metrics(
-                output=va_output["outputs"],
-                target=va_output["targets"],
+                output=retransform_regression_taget(config=config, outputs=va_output["outputs"]),
+                target=valid_data[["original_x", "original_y"]].query("d >= 60").to_numpy(),
                 info=valid_data[["d", "t"]].query("d >= 60").to_numpy(),
             )
 

@@ -131,7 +131,7 @@ def valid_fn(config: Config, model, dataloader):
     model.to(device)
     model.eval()
     outputs, losses = [], []
-    targets = []
+
     iteration_bar = tqdm(enumerate(dataloader), total=len(dataloader))
     for _, batch in iteration_bar:
         batch = to_device(batch, device)
@@ -146,19 +146,15 @@ def valid_fn(config: Config, model, dataloader):
             loss = torch.div(loss, gradient_accumulation_steps)
 
         batch_outputs = batch_outputs.to("cpu").numpy()
-        for a_batch_outputs, a_length, a_batch_targets in zip(
-            batch_outputs, batch["auxiliary_lengths"], batch["target_seqs"]
-        ):
+        for a_batch_outputs, a_length in zip(batch_outputs, batch["auxiliary_lengths"]):
             outputs.append(a_batch_outputs[:a_length])
-            targets.append(a_batch_targets.cpu().numpy()[:a_length])
 
         losses.append(float(loss))
         iteration_bar.set_description(f"loss: {np.mean(losses):.4f}")
 
     outputs = np.concatenate(outputs)
-    targets = np.concatenate(targets)
     loss = np.mean(losses)
-    return {"loss": loss, "outputs": outputs, "targets": targets}
+    return {"loss": loss, "outputs": outputs}
 
 
 def inference_fn(config: Config, model):
