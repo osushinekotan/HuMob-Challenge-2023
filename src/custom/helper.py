@@ -74,6 +74,7 @@ def train_fn(
     clip_grad_norm = config["/nn/clip_grad_norm"]
     batch_scheduler = config["/nn/batch_scheduler"]
 
+    model.to(device)
     model.train()
     scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
     losses = []
@@ -127,6 +128,7 @@ def valid_fn(config: Config, model, dataloader):
     device = config["/nn/device"]
     gradient_accumulation_steps = config["/nn/gradient_accumulation_steps"]
 
+    model.to(device)
     model.eval()
     outputs, losses = [], []
     targets = []
@@ -148,7 +150,7 @@ def valid_fn(config: Config, model, dataloader):
             batch_outputs, batch["auxiliary_lengths"], batch["target_seqs"]
         ):
             outputs.append(a_batch_outputs[:a_length])
-            targets.append(a_batch_targets[:a_length])
+            targets.append(a_batch_targets.cpu().numpy()[:a_length])
 
         losses.append(float(loss))
         iteration_bar.set_description(f"loss: {np.mean(losses):.4f}")

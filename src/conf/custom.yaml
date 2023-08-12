@@ -1,7 +1,7 @@
 global:
   project: "HuMob-Challenge-2023"
   seed: 8823
-  debug: True
+  debug: False
   resources: "/workspace/resources"
 
 fe:
@@ -36,24 +36,24 @@ nn:
   out_dir: "001/models"
   device: ???
   padding_value: -999
-  max_epochs: 100
+  max_epochs: 2
   gradient_accumulation_steps: 1
-  clip_grad_norm: 1000
-  fp16: False
+  clip_grad_norm: 10000
+  fp16: True
   batch_scheduler: True
   iters_per_epoch: ???
   num_training_steps: ???
 
   feature:
     feature_names: ???
-    auxiliary_names: ["t", "d", "x", "y"]
+    auxiliary_names: ["t", "d"]
     target_names: ["x", "y"]
 
   model:
     type: CustomLSTMModelV1
     input_size1: ???
     input_size2: ???
-    hidden_size: 8
+    hidden_size: 1024
     output_size: ???
 
   criterion:
@@ -87,8 +87,8 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
-      batch_size: 2
-      num_workers: 4
+      batch_size: 16
+      num_workers: 1
       shuffle: True
       pin_memory: True
       drop_last: True
@@ -99,8 +99,8 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
-      batch_size: 2
-      num_workers: 4
+      batch_size: 32
+      num_workers: 1
       shuffle: True
       pin_memory: True
       drop_last: False
@@ -111,8 +111,8 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: False
         padding_value: "@/nn/padding_value"
-      batch_size: 2
-      num_workers: 4
+      batch_size: 32
+      num_workers: 1
       shuffle: False
       pin_memory: True
       drop_last: False
@@ -120,7 +120,7 @@ nn:
   optimizer:
     type: AdamW
     params: { type: method_call, obj: "@/nn/model", method: parameters }
-    lr: 1.0e-1
+    lr: 5.0e-2
     weight_decay: 0
     eps: 1.0e-6
     betas: [0.9, 0.999]
@@ -130,4 +130,4 @@ nn:
     optimizer: "@/nn/optimizer"
     num_warmup_steps: 0
     num_training_steps: "@/nn/num_training_steps"
-    num_cycles: 0
+    num_cycles: 0.5
