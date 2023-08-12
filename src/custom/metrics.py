@@ -2,10 +2,13 @@ from typing import Any
 
 import numpy as np
 import torch
+from logger import Logger
 from sklearn.metrics import mean_squared_error
 from torch import nn
 
 import geobleu
+
+logger = Logger(name="metrics")
 
 
 class MSEMetric:
@@ -20,14 +23,30 @@ class MSEMetric:
 
 
 class GeobleuMetric:
-    def __init__(self, processes=3) -> None:
+    def __init__(self, processes=3, sampling_ratio=None, seed=0) -> None:
         # dtw_score : smaller is better
         # geobleu_score : larger is better
         self.processes = processes
+        self.sampling_ratio = sampling_ratio  # too heavy metrics...
+        self.seed = seed
 
     def __call__(self, output, target, **kwargs) -> Any:
-        generated = np.concatenate([kwargs["info"], output], axis=1).tolist()
-        reference = np.concatenate([kwargs["info"], target], axis=1).tolist()
+        generated = np.concatenate([kwargs["info"], output], axis=1)
+        reference = np.concatenate([kwargs["info"], target], axis=1)
+
+        if self.sampling_ratio:
+            np.random.seed(self.seed)
+            n = len(generated)
+            sample_size = int(n * self.sampling_ratio)
+            selected_index_arr = np.random.choice(list(range(n)), sample_size, replace=False)
+
+            logger.debug(f"sampling size : {sample_size}, head : {selected_index_arr[:5]}")
+
+            generated = generated[selected_index_arr]
+            reference = reference[selected_index_arr]
+
+        generated = generated.tolist()
+        reference = reference.tolist()
 
         geobleu_score = geobleu.calc_geobleu(generated, reference, processes=self.processes)
         dtw_score = geobleu.calc_dtw(generated, reference, processes=self.processes)

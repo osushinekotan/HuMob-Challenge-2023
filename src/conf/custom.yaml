@@ -1,12 +1,12 @@
 global:
   project: "HuMob-Challenge-2023"
   seed: 8823
-  debug: False
+  debug: True
   resources: "/workspace/resources"
 
 fe:
   out_dir: "001/features"
-  overwrite: False
+  overwrite: True
   dataset: "task2_dataset"
   extractors:
     - {
@@ -57,7 +57,7 @@ nn:
     type: CustomLSTMModelV1
     input_size1: ???
     input_size2: ???
-    hidden_size: 1024
+    hidden_size: 2
     output_size: ???
 
   criterion:
@@ -66,6 +66,8 @@ nn:
   metrics:
     type: GeobleuMetric
     processes: 6
+    sampling_ratio: 0.1
+    seed: "@/global/seed"
 
   dataset:
     train:
@@ -91,7 +93,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
-      batch_size: 16
+      batch_size: 2
       num_workers: 1
       shuffle: True
       pin_memory: True
@@ -103,7 +105,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
-      batch_size: 32
+      batch_size: 2
       num_workers: 1
       shuffle: True
       pin_memory: True
@@ -115,7 +117,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: False
         padding_value: "@/nn/padding_value"
-      batch_size: 32
+      batch_size: 2
       num_workers: 1
       shuffle: False
       pin_memory: True
