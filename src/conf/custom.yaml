@@ -1,7 +1,7 @@
 global:
   project: "HuMob-Challenge-2023"
   seed: 8823
-  debug: True
+  debug: False
   resources: "/workspace/resources"
 
 fe:
@@ -54,7 +54,7 @@ nn:
     type: CustomLSTMModelV1
     input_size1: ???
     input_size2: ???
-    hidden_size: 2
+    hidden_size: 1024
     output_size: ???
 
   criterion:
@@ -92,7 +92,7 @@ nn:
         padding_value: "@/nn/padding_value"
       batch_size: 256
       num_workers: 1
-      shuffle: True
+      shuffle: False
       pin_memory: True
       drop_last: True
     valid:
@@ -104,7 +104,7 @@ nn:
         padding_value: "@/nn/padding_value"
       batch_size: 512
       num_workers: 1
-      shuffle: True
+      shuffle: False
       pin_memory: True
       drop_last: False
     test:
