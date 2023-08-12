@@ -148,7 +148,7 @@ def get_wandb_run_name(config: Config) -> str:
 
 
 def retransform_regression_taget(config: Config, outputs: np.ndarray) -> np.ndarray:
-    if config["/fe/regression_taget_transform"] == "log":
+    if config["/fe/regression_target_transform"] == "log":
         outputs = np.exp(outputs).astype(int)
         return outputs
 
@@ -211,7 +211,7 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
         with logger.time_log("calc metrics"):
             eval_score = metrics(
                 output=retransform_regression_taget(config=config, outputs=va_output["outputs"]),
-                target=valid_data[["original_x", "original_y"]].query("d >= 60").to_numpy(),
+                target=valid_data.query("d >= 60")[["original_x", "original_y"]].to_numpy(),
                 info=valid_data[["d", "t"]].query("d >= 60").to_numpy(),
             )
 

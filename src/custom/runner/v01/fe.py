@@ -133,10 +133,10 @@ def add_original_raw_targets(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def transform_regression_taget(config: Config, df: pd.DataFrame) -> pd.DataFrame:
-    target_mask = df["original_x"] != 999
-    if config["/fe/regression_taget_transform"] == "log":
-        df.loc[target_mask, ["x", "y"]] = np.log(df.loc[target_mask, ["original_x", "original_y"]])
+def transform_regression_target(config: Config, df: pd.DataFrame) -> pd.DataFrame:
+    target_mask = np.array(df["original_x"] != 999, dtype=bool)
+    if config["/fe/regression_target_transform"] == "log":
+        df.loc[target_mask, ["x", "y"]] = np.log(df.loc[target_mask, ["original_x", "original_y"]].to_numpy())
         return df
 
     else:
@@ -216,6 +216,10 @@ def run() -> None:
     # add fold index
     raw_train_df = add_fold_index(config=config, df=raw_train_df)
 
+    # target enginineering
+    train_feature_df = transform_regression_target(config=config, df=raw_train_df)
+    test_feature_df = transform_regression_target(config=config, df=raw_test_df)
+
     # feature engineering
     train_feature_df = make_features(
         config=config,
@@ -229,10 +233,6 @@ def run() -> None:
         overwrite=True,
         name="test_feature_df",
     )
-
-    # target enginineering
-    train_feature_df = transform_regression_taget(config=Config, df=train_feature_df)
-    test_feature_df = transform_regression_taget(config=Config, df=test_feature_df)
 
     # check
     logger.debug(f"train_feature_df : {train_feature_df.shape}, test_feature_df : {test_feature_df.shape}")
