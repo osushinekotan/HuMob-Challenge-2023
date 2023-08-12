@@ -7,7 +7,7 @@ global:
 fe:
   out_dir: "001/features"
   overwrite: False
-  dataset: "task2_dataset"
+  dataset: "task1_dataset"
   extractors:
     - {
         type: GroupedDiffFeatureExtractor,
@@ -21,10 +21,7 @@ fe:
         group_values: ["t"],
         intervals: [1],
       }
-    - {
-        type: RawFeatureExtractor,
-        use_columns: ["d", "t", "x", "y", "original_x", "original_y"],
-      }
+    - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] }
   regression_target_transform: log
 
 cv:
@@ -40,7 +37,7 @@ nn:
   out_dir: "001/models"
   device: ???
   padding_value: -999
-  max_epochs: 2
+  max_epochs: 10
   gradient_accumulation_steps: 1
   clip_grad_norm: 10000
   fp16: True

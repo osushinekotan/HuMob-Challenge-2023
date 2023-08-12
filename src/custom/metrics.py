@@ -2,10 +2,13 @@ from typing import Any
 
 import numpy as np
 import torch
+from logger import Logger
 from sklearn.metrics import mean_squared_error
 from torch import nn
 
 import geobleu
+
+logger = Logger(name="metrics")
 
 
 class MSEMetric:
@@ -29,8 +32,10 @@ class GeobleuMetric:
         generated = np.concatenate([kwargs["info"], output], axis=1).tolist()
         reference = np.concatenate([kwargs["info"], target], axis=1).tolist()
 
-        geobleu_score = geobleu.calc_geobleu(generated, reference, processes=self.processes)
-        dtw_score = geobleu.calc_dtw(generated, reference, processes=self.processes)
+        with logger.time_log("geobleu"):
+            geobleu_score = geobleu.calc_geobleu(generated, reference, processes=self.processes)
+        with logger.time_log("dtw"):
+            dtw_score = geobleu.calc_dtw(generated, reference, processes=self.processes)
         return {"geobleu_score": geobleu_score, "dtw_score": -dtw_score}
 
 
