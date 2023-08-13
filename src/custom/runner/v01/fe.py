@@ -209,6 +209,28 @@ def add_poi_features(df, poi_df, batch_size=100000):
     return merged_df
 
 
+def scaling(config, train_feature_df, test_feature_df):
+    n = len(train_feature_df)
+
+    all_df = pd.concat([train_feature_df, test_feature_df]).reset_index()
+    feature_cols = [x for x in all_df.columns if x.startswith("f_")]
+    nofeature_cols = [x for x in all_df.columns if not x.startswith("f_")]
+
+    assert sorted(feature_cols + nofeature_cols) == sorted(all_df.columns)
+
+    scaler = config["/fe/scaling"]
+    scaled_df = pd.DataFrame(scaler.fit_transform(all_df[feature_cols]), columns=feature_cols)
+
+    all_df = pd.concat([all_df[nofeature_cols], scaled_df], axis=1)
+    scaled_train_feature_df = all_df.iloc[:n].reset_index(drop=True)
+    scaled_test_feature_df = all_df[n:].reset_index(drop=True)
+
+    assert len(train_feature_df) == len(scaled_train_feature_df)
+    assert len(test_feature_df) == len(scaled_test_feature_df)
+
+    return scaled_train_feature_df, scaled_test_feature_df
+
+
 def run() -> None:
     # set config
     pre_eval_config = load_yaml()
@@ -264,6 +286,12 @@ def run() -> None:
         df=raw_test_df,
         overwrite=True,
         name="test_feature_df",
+    )
+    # scaling
+    train_feature_df, test_feature_df = scaling(
+        config=config,
+        train_feature_df=train_feature_df,
+        test_feature_df=test_feature_df,
     )
 
     # check

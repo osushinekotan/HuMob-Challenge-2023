@@ -24,6 +24,8 @@ fe:
     - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] } # + poi features
   use_poi_features: True
   regression_target_transform: log
+  scaling:
+    type: StandardScaler
 
 cv:
   num_fold: 5
@@ -48,14 +50,16 @@ nn:
 
   feature:
     feature_names: ???
-    auxiliary_names: ["t", "d"]
+    auxiliary_names: ["f_x", "f_y"]
     target_names: ["x", "y"]
 
   model:
     type: CustomTransformerModelV1
-    d_model: ???
+    input_size_src: ???
+    input_size_tgt: ???
+    d_model: 12
     output_size: ???
-    nhead: 8
+    nhead: 4
     num_encoder_layers: 6
     num_decoder_layers: 6
 
@@ -89,6 +93,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
+        return_padding_mask: True
       batch_size: 2
       num_workers: 1
       shuffle: False
@@ -101,6 +106,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
+        return_padding_mask: True
       batch_size: 2
       num_workers: 1
       shuffle: False
@@ -113,6 +119,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: False
         padding_value: "@/nn/padding_value"
+        return_padding_mask: True
       batch_size: 2
       num_workers: 1
       shuffle: False

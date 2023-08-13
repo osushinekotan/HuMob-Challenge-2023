@@ -33,10 +33,27 @@ def make_sequences(df: pd.DataFrame, group_key: str, group_values: list[str]) ->
     return sequences
 
 
+def set_model_config(pre_eval_config: dict, feature_names):
+    # model
+    if pre_eval_config["nn"]["model"]["type"].startswith("CustomLSTMModel"):
+        pre_eval_config["nn"]["model"]["input_size1"] = len(pre_eval_config["nn"]["feature"]["auxiliary_names"])
+        pre_eval_config["nn"]["model"]["input_size2"] = len(pre_eval_config["nn"]["feature"]["auxiliary_names"])
+        pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
+        return pre_eval_config
+
+    elif pre_eval_config["nn"]["model"]["type"].startswith("CustomTransformerModel"):
+        pre_eval_config["nn"]["model"]["input_size_src"] = len(feature_names)
+        pre_eval_config["nn"]["model"]["input_size_tgt"] = len(pre_eval_config["nn"]["feature"]["auxiliary_names"])
+        pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
+        return pre_eval_config
+    else:
+        raise NotImplementedError()
+
+
 def set_config(pre_eval_config: dict, test_feature_df: pd.DataFrame) -> Config:
     # update parameters
     pre_eval_config["nn"]["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.debug(f'device : {pre_eval_config["nn"]["device"]}' )
+    logger.debug(f'device : {pre_eval_config["nn"]["device"]}')
 
     # set feature names
     feature_names = pre_eval_config["nn"]["feature"]["feature_names"]
@@ -60,9 +77,7 @@ def set_config(pre_eval_config: dict, test_feature_df: pd.DataFrame) -> Config:
     )
 
     # model
-    pre_eval_config["nn"]["model"]["input_size1"] = len(feature_names)
-    pre_eval_config["nn"]["model"]["input_size2"] = len(pre_eval_config["nn"]["feature"]["auxiliary_names"])
-    pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
+    pre_eval_config = set_model_config(pre_eval_config, feature_names)
 
     # check
     assert len(pre_eval_config["nn"]["dataset"]["test"]["auxiliary_seqs"]) == len(
