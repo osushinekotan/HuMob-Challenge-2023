@@ -61,10 +61,7 @@ nn:
     type: SeqMSELoss
 
   metrics:
-    type: GeobleuMetric
-    processes: 2
-    sampling_ratio: 0.1
-    seed: "@/global/seed"
+    type: MSEMetric
 
   dataset:
     train:
@@ -90,7 +87,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
-      batch_size: 256
+      batch_size: 24
       num_workers: 1
       shuffle: False
       pin_memory: True
@@ -102,7 +99,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
-      batch_size: 512
+      batch_size: 64
       num_workers: 1
       shuffle: False
       pin_memory: True
@@ -114,7 +111,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: False
         padding_value: "@/nn/padding_value"
-      batch_size: 512
+      batch_size: 64
       num_workers: 1
       shuffle: False
       pin_memory: True

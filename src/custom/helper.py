@@ -107,11 +107,16 @@ def train_fn(
 
         losses.append(float(loss))
         ave_loss = np.mean(losses)
-        iteration_bar.set_description(
-            f"step: {total_step}, loss: {ave_loss:.4f} lr: {scheduler.get_last_lr()[0]:.6f}"
-        )
+        iteration_bar.set_description(f"step: {total_step}, loss: {ave_loss:.4f} lr: {scheduler.get_last_lr()[0]:.6f}")
         if wandb_logger is not None:
-            wandb_logger.log({"train_loss": ave_loss, "lr": scheduler.get_last_lr()[0], "train_step": total_step})
+            wandb_logger.log(
+                {
+                    "train_ave_loss": ave_loss,
+                    "train_loss": float(loss),
+                    "lr": scheduler.get_last_lr()[0],
+                    "train_step": total_step,
+                }
+            )
 
     loss = np.mean(losses)
     if not batch_scheduler:
