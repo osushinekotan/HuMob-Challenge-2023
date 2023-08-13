@@ -21,6 +21,7 @@ class MSEMetric:
         logger.debug(f"output : {output[:10]}")
         logger.debug(f"target : {target[:10]}")
         assert 999 not in target, ValueError()
+
         score = mean_squared_error(target, output, squared=self.squared)
         score = -score if self.higher_is_better else score
         return {self.score_naem: score}
