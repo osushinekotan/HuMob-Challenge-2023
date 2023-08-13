@@ -52,11 +52,12 @@ nn:
     target_names: ["x", "y"]
 
   model:
-    type: CustomLSTMModelV1
-    input_size1: ???
-    input_size2: ???
-    hidden_size: 2
+    type: CustomTransformerModelV1
+    d_model: ???
     output_size: ???
+    nhead: 8
+    num_encoder_layers: 6
+    num_decoder_layers: 6
 
   criterion:
     type: SeqMSELoss

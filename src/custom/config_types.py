@@ -2,7 +2,7 @@ from custom.dataset import TestDataset, TrainDataset
 from custom.feature.feature_extractor import GroupedDiffFeatureExtractor, RawFeatureExtractor
 from custom.helper import PadSequenceCollateFn
 from custom.metrics import GeobleuMetric, MSEMetric, SeqMSELoss
-from custom.model import CustomLSTMModelV1
+from custom.model import CustomLSTMModelV1, CustomTransformerModelV1
 from sklearn.model_selection import StratifiedGroupKFold
 from torch import nn
 from torch.optim import AdamW
@@ -24,6 +24,7 @@ CONFIG_TYPES = dict(
     PadSequenceCollateFn=PadSequenceCollateFn,
     # model
     CustomLSTMModelV1=CustomLSTMModelV1,
+    CustomTransformerModelV1=CustomTransformerModelV1,
     # optimizer
     AdamW=AdamW,
     # scheduler
