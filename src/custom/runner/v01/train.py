@@ -150,6 +150,8 @@ def get_wandb_run_name(config: Config) -> str:
 def retransform_regression_taget(config: Config, outputs: np.ndarray) -> np.ndarray:
     if config["/fe/regression_target_transform"] == "log":
         outputs = np.exp(outputs).astype(int)
+        outputs[outputs < 1] = 1
+        outputs[outputs > 200] = 200
         return outputs
 
     else:
