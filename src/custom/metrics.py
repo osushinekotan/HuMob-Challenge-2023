@@ -18,6 +18,9 @@ class MSEMetric:
         self.score_naem = "rmse_score" if self.squared else "mse_score"
 
     def __call__(self, output, target, **kwargs):
+        logger.debug(f"output : {output[:10]}")
+        logger.debug(f"target : {target[:10]}")
+        assert 999 not in target, ValueError()
         score = mean_squared_error(target, output, squared=self.squared)
         score = -score if self.higher_is_better else score
         return {self.score_naem: score}
@@ -32,6 +35,9 @@ class GeobleuMetric:
         self.seed = seed
 
     def __call__(self, output, target, **kwargs) -> Any:
+        logger.debug(f"output : {output[:10]}")
+        logger.debug(f"target : {target[:10]}")
+
         generated = np.concatenate([kwargs["info"], output], axis=1)
         reference = np.concatenate([kwargs["info"], target], axis=1)
 

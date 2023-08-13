@@ -1,13 +1,13 @@
 global:
   project: "HuMob-Challenge-2023"
   seed: 8823
-  debug: False
+  debug: True
   resources: "/workspace/resources"
 
 fe:
   out_dir: "001/features"
   overwrite: False
-  dataset: "task1_dataset"
+  dataset: "task2_dataset"
   extractors:
     - {
         type: GroupedDiffFeatureExtractor,
@@ -21,7 +21,8 @@ fe:
         group_values: ["t"],
         intervals: [1],
       }
-    - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] }
+    - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] } # + poi features
+  use_poi_features: True
   regression_target_transform: log
 
 cv:
@@ -37,7 +38,7 @@ nn:
   out_dir: "001/models"
   device: ???
   padding_value: -999
-  max_epochs: 10
+  max_epochs: 2
   gradient_accumulation_steps: 1
   clip_grad_norm: 10000
   fp16: True
@@ -54,7 +55,7 @@ nn:
     type: CustomLSTMModelV1
     input_size1: ???
     input_size2: ???
-    hidden_size: 1024
+    hidden_size: 2
     output_size: ???
 
   criterion:
@@ -87,7 +88,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
-      batch_size: 24
+      batch_size: 2
       num_workers: 1
       shuffle: False
       pin_memory: True
@@ -99,7 +100,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
-      batch_size: 64
+      batch_size: 2
       num_workers: 1
       shuffle: False
       pin_memory: True
@@ -111,7 +112,7 @@ nn:
         type: PadSequenceCollateFn
         is_train_mode: False
         padding_value: "@/nn/padding_value"
-      batch_size: 64
+      batch_size: 2
       num_workers: 1
       shuffle: False
       pin_memory: True
