@@ -212,7 +212,7 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
             eval_score = metrics(
                 output=retransform_regression_taget(config=config, outputs=va_output["outputs"]),
                 target=valid_data.query("d >= 60")[["original_x", "original_y"]].to_numpy(),
-                info=valid_data[["d", "t"]].query("d >= 60").to_numpy(),
+                # info=valid_data[["d", "t"]].query("d >= 60").to_numpy(),
             )
 
         # logs

@@ -15,11 +15,15 @@ class MSEMetric:
     def __init__(self, squared=True, higher_is_better=True):
         self.squared = squared
         self.higher_is_better = higher_is_better
+        self.score_naem = "rmse_score" if self.squared else "mse_score"
 
-    def __call__(self, output, target):
+    def __call__(self, output, target, **kwargs):
+        logger.debug(f"output : {output[:10]}")
+        logger.debug(f"target : {target[:10]}")
+        assert 999 not in target, ValueError()
         score = mean_squared_error(target, output, squared=self.squared)
         score = -score if self.higher_is_better else score
-        return score
+        return {self.score_naem: score}
 
 
 class GeobleuMetric:
@@ -31,6 +35,9 @@ class GeobleuMetric:
         self.seed = seed
 
     def __call__(self, output, target, **kwargs) -> Any:
+        logger.debug(f"output : {output[:10]}")
+        logger.debug(f"target : {target[:10]}")
+
         generated = np.concatenate([kwargs["info"], output], axis=1)
         reference = np.concatenate([kwargs["info"], target], axis=1)
 
@@ -48,8 +55,13 @@ class GeobleuMetric:
         generated = generated.tolist()
         reference = reference.tolist()
 
-        geobleu_score = geobleu.calc_geobleu(generated, reference, processes=self.processes)
-        dtw_score = geobleu.calc_dtw(generated, reference, processes=self.processes)
+        with logger.time_log("geobleu"):
+            geobleu_score = geobleu.calc_geobleu(generated, reference, processes=self.processes)
+            logger.info(f"score : {geobleu_score:.6f}")
+        with logger.time_log("dtw"):
+            dtw_score = geobleu.calc_dtw(generated, reference, processes=self.processes)
+            logger.info(f"score : {dtw_score:.6f}")
+
         return {"geobleu_score": geobleu_score, "dtw_score": -dtw_score}
 
 

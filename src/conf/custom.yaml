@@ -6,7 +6,7 @@ global:
 
 fe:
   out_dir: "001/features"
-  overwrite: True
+  overwrite: False
   dataset: "task2_dataset"
   extractors:
     - {
@@ -21,10 +21,8 @@ fe:
         group_values: ["t"],
         intervals: [1],
       }
-    - {
-        type: RawFeatureExtractor,
-        use_columns: ["d", "t", "x", "y", "original_x", "original_y"],
-      }
+    - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] } # + poi features
+  use_poi_features: True
   regression_target_transform: log
 
 cv:
@@ -64,10 +62,7 @@ nn:
     type: SeqMSELoss
 
   metrics:
-    type: GeobleuMetric
-    processes: 6
-    sampling_ratio: 0.1
-    seed: "@/global/seed"
+    type: MSEMetric
 
   dataset:
     train:
@@ -95,7 +90,7 @@ nn:
         padding_value: "@/nn/padding_value"
       batch_size: 2
       num_workers: 1
-      shuffle: True
+      shuffle: False
       pin_memory: True
       drop_last: True
     valid:
@@ -107,7 +102,7 @@ nn:
         padding_value: "@/nn/padding_value"
       batch_size: 2
       num_workers: 1
-      shuffle: True
+      shuffle: False
       pin_memory: True
       drop_last: False
     test:
