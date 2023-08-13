@@ -15,11 +15,12 @@ class MSEMetric:
     def __init__(self, squared=True, higher_is_better=True):
         self.squared = squared
         self.higher_is_better = higher_is_better
+        self.score_naem = "rmse_score" if self.squared else "mse_score"
 
     def __call__(self, output, target, **kwargs):
         score = mean_squared_error(target, output, squared=self.squared)
         score = -score if self.higher_is_better else score
-        return score
+        return {self.score_naem: score}
 
 
 class GeobleuMetric:
@@ -54,7 +55,7 @@ class GeobleuMetric:
         with logger.time_log("dtw"):
             dtw_score = geobleu.calc_dtw(generated, reference, processes=self.processes)
             logger.info(f"score : {dtw_score:.6f}")
-            
+
         return {"geobleu_score": geobleu_score, "dtw_score": -dtw_score}
 
 
