@@ -12,14 +12,14 @@ fe:
     - {
         type: GroupedDiffFeatureExtractor,
         group_key: uid,
-        group_values: ["d"],
-        intervals: [1],
+        group_values: ["d", "x", "y"],
+        intervals: [1, -1, 2, -2],
       }
     - {
         type: GroupedDiffFeatureExtractor,
         group_key: ["uid", "d"],
         group_values: ["t"],
-        intervals: [1],
+        intervals: [1, -1],
       }
     - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] } # + poi features
   use_poi_features: True
@@ -50,7 +50,7 @@ nn:
 
   feature:
     feature_names: ???
-    auxiliary_names: ["f_d", "f_t"]
+    auxiliary_names: ??? # f_d_*, f_t_*
     target_names: ["x", "y"]
 
   model:
@@ -92,7 +92,7 @@ nn:
         padding_value: "@/nn/padding_value"
         return_padding_mask: True
       batch_size: 24
-      num_workers: 1
+      num_workers: 4
       shuffle: False
       pin_memory: True
       drop_last: True
@@ -105,7 +105,7 @@ nn:
         padding_value: "@/nn/padding_value"
         return_padding_mask: True
       batch_size: 32
-      num_workers: 1
+      num_workers: 2
       shuffle: False
       pin_memory: True
       drop_last: False
@@ -118,7 +118,7 @@ nn:
         padding_value: "@/nn/padding_value"
         return_padding_mask: True
       batch_size: 32
-      num_workers: 1
+      num_workers: 2
       shuffle: False
       pin_memory: True
       drop_last: False

@@ -33,17 +33,17 @@ def make_sequences(df: pd.DataFrame, group_key: str, group_values: list[str]) ->
     return sequences
 
 
-def set_model_config(pre_eval_config: dict, feature_names):
+def set_model_config(pre_eval_config: dict, feature_names, auxiliary_names):
     # model
     if pre_eval_config["nn"]["model"]["type"].startswith("CustomLSTMModel"):
         pre_eval_config["nn"]["model"]["input_size1"] = len(feature_names)
-        pre_eval_config["nn"]["model"]["input_size2"] = len(pre_eval_config["nn"]["feature"]["auxiliary_names"])
+        pre_eval_config["nn"]["model"]["input_size2"] = len(auxiliary_names)
         pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
         return pre_eval_config
 
     elif pre_eval_config["nn"]["model"]["type"].startswith("CustomTransformerModel"):
         pre_eval_config["nn"]["model"]["input_size_src"] = len(feature_names)
-        pre_eval_config["nn"]["model"]["input_size_tgt"] = len(pre_eval_config["nn"]["feature"]["auxiliary_names"])
+        pre_eval_config["nn"]["model"]["input_size_tgt"] = len(auxiliary_names)
         pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
         return pre_eval_config
     else:
@@ -60,6 +60,14 @@ def set_config(pre_eval_config: dict, test_feature_df: pd.DataFrame) -> Config:
     feature_names = (
         feature_names if feature_names != "???" else [x for x in test_feature_df.columns if x.startswith("f_")]
     )
+    auxiliary_names = pre_eval_config["nn"]["feature"]["auxiliary_names"]
+    auxiliary_names = (
+        auxiliary_names
+        if auxiliary_names != "???"
+        else [x for x in test_feature_df.columns if x.startswith("f_d") or x.startswith("f_t")]
+    )
+    logger.info(f"feature_names : {feature_names}")
+    logger.info(f"auxiliary_names : {auxiliary_names}")
 
     # target (fix)
     lower_target_d = 60
@@ -73,11 +81,11 @@ def set_config(pre_eval_config: dict, test_feature_df: pd.DataFrame) -> Config:
     pre_eval_config["nn"]["dataset"]["test"]["auxiliary_seqs"] = make_sequences(
         df=test_feature_df.query(f"d >= {lower_target_d}"),
         group_key="uid",
-        group_values=pre_eval_config["nn"]["feature"]["auxiliary_names"],
+        group_values=auxiliary_names,
     )
 
     # model
-    pre_eval_config = set_model_config(pre_eval_config, feature_names)
+    pre_eval_config = set_model_config(pre_eval_config, feature_names, auxiliary_names)
 
     # check
     assert len(pre_eval_config["nn"]["dataset"]["test"]["auxiliary_seqs"]) == len(
