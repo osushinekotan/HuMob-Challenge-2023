@@ -50,6 +50,23 @@ def calc_steps(
     return training_steps, iters_per_epoch
 
 
+def set_model_config(pre_eval_config: dict, feature_names):
+    # model
+    if pre_eval_config["nn"]["model"]["type"].startswith("CustomLSTMModel"):
+        pre_eval_config["nn"]["model"]["input_size1"] = len(pre_eval_config["nn"]["feature"]["auxiliary_names"])
+        pre_eval_config["nn"]["model"]["input_size2"] = len(pre_eval_config["nn"]["feature"]["auxiliary_names"])
+        pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
+        return pre_eval_config
+
+    elif pre_eval_config["nn"]["model"]["type"].startswith("CustomTransformerModel"):
+        pre_eval_config["nn"]["model"]["input_size_src"] = len(feature_names)
+        pre_eval_config["nn"]["model"]["input_size_tgt"] = len(pre_eval_config["nn"]["feature"]["auxiliary_names"])
+        pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
+        return pre_eval_config
+    else:
+        raise NotImplementedError()
+
+
 def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feature_df: pd.DataFrame) -> Config:
     # update parameters
     num_training_steps, iters_per_epoch = calc_steps(
@@ -112,9 +129,7 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
     )
 
     # model
-    pre_eval_config["nn"]["model"]["input_size1"] = len(feature_names)
-    pre_eval_config["nn"]["model"]["input_size2"] = len(pre_eval_config["nn"]["feature"]["auxiliary_names"])
-    pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
+    pre_eval_config = set_model_config(pre_eval_config, feature_names)
 
     # check
     assert (

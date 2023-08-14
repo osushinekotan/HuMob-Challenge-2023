@@ -39,3 +39,45 @@ class CustomLSTMModelV1(nn.Module):
         x = self.out(x)
 
         return x
+
+
+class CustomTransformerModelV1(nn.Module):
+    def __init__(
+        self,
+        input_size_src,
+        input_size_tgt,
+        d_model,
+        output_size,
+        nhead=8,
+        num_encoder_layers=6,
+        num_decoder_layers=6,
+    ):
+        super().__init__()
+        self.embedding_src = nn.Linear(input_size_src, d_model)
+        self.embedding_tgt = nn.Linear(input_size_tgt, d_model)
+
+        self.transformer = nn.Transformer(
+            d_model,
+            nhead,
+            num_encoder_layers,
+            num_decoder_layers,
+            batch_first=True,
+        )
+        self.out = nn.Linear(d_model, output_size)
+
+    def forward(self, batch):
+        x_src = self.embedding_src(batch["feature_seqs"])
+        x_tgt = self.embedding_tgt(batch["auxiliary_seqs"])
+
+        src_mask = batch["feature_padding_mask"]
+        tgt_mask = batch["auxiliary_padding_mask"]
+
+        x = self.transformer(
+            src=x_src,
+            tgt=x_tgt,
+            src_key_padding_mask=src_mask,
+            tgt_key_padding_mask=tgt_mask,
+        )
+        x = self.out(x)
+
+        return x

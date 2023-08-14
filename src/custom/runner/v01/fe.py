@@ -150,7 +150,6 @@ def make_features(
     df: pd.DataFrame,
     overwrite: bool = False,
     no_cache: bool = False,
-    name: str = "",
 ) -> pd.DataFrame:
     extractors = config["/fe/extractors"]
     dataset_name = config["/fe/dataset"]
@@ -159,12 +158,6 @@ def make_features(
     out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"] / dataset_name
     logger.debug(f"make_features: overwrite={overwrite}, no_cache={no_cache}")
 
-    # cache for final output
-    filepath_for_features_df = out_dir / f"{name}.pkl"
-    if filepath_for_features_df.is_file() and (not overwrite):
-        logger.info(f"load : {filepath_for_features_df}")
-        return joblib.load(filepath_for_features_df)
-
     # feature engineering
     @cache(out_dir=out_dir, overwrite=overwrite, no_cache=no_cache)
     def _extract(df, extractor):
@@ -172,7 +165,16 @@ def make_features(
             return extractor(df)
 
     features_df = pd.concat([df] + [_extract(df, extractor) for extractor in extractors], axis=1)
+    return features_df
+
+
+def save_features(config, features_df, name):
+    # set dir
+    out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"] / config["/fe/dataset"]
+    filepath_for_features_df = out_dir / f"{name}.pkl"
+
     joblib.dump(features_df, filepath_for_features_df)
+    logger.info(f"complete save_features! ({filepath_for_features_df})")
     return features_df
 
 
@@ -207,6 +209,28 @@ def add_poi_features(df, poi_df, batch_size=100000):
     merged_df = join_poi_to_task_data_batched(task_df=df, poi_df=poi_df, batch_size=batch_size)
     merged_df.columns = [f"f_{x}" if x.startswith("POIcat_") else x for x in merged_df.columns]
     return merged_df
+
+
+def scaling(config, train_feature_df, test_feature_df):
+    n = len(train_feature_df)
+
+    all_df = pd.concat([train_feature_df, test_feature_df]).reset_index()
+    feature_cols = [x for x in all_df.columns if x.startswith("f_")]
+    nofeature_cols = [x for x in all_df.columns if not x.startswith("f_")]
+
+    assert sorted(feature_cols + nofeature_cols) == sorted(all_df.columns)
+
+    scaler = config["/fe/scaling"]
+    scaled_df = pd.DataFrame(scaler.fit_transform(all_df[feature_cols]), columns=feature_cols)
+
+    all_df = pd.concat([all_df[nofeature_cols], scaled_df], axis=1)
+    scaled_train_feature_df = all_df.iloc[:n].reset_index(drop=True)
+    scaled_test_feature_df = all_df[n:].reset_index(drop=True)
+
+    assert len(train_feature_df) == len(scaled_train_feature_df)
+    assert len(test_feature_df) == len(scaled_test_feature_df)
+
+    return scaled_train_feature_df, scaled_test_feature_df
 
 
 def run() -> None:
@@ -257,14 +281,23 @@ def run() -> None:
         config=config,
         df=raw_train_df,
         overwrite=True,
-        name="train_feature_df",
     )
     test_feature_df = make_features(
         config=config,
         df=raw_test_df,
         overwrite=True,
-        name="test_feature_df",
     )
+
+    # scaling
+    train_feature_df, test_feature_df = scaling(
+        config=config,
+        train_feature_df=train_feature_df,
+        test_feature_df=test_feature_df,
+    )
+
+    # save features
+    save_features(config=config, features_df=train_feature_df, name="train_feature_df")
+    save_features(config=config, features_df=test_feature_df, name="test_feature_df")
 
     # check
     logger.debug(f"train_feature_df : {train_feature_df.shape}, test_feature_df : {test_feature_df.shape}")
