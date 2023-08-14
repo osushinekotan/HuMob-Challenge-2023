@@ -162,7 +162,7 @@ def make_features(
     @cache(out_dir=out_dir, overwrite=overwrite, no_cache=no_cache)
     def _extract(df, extractor):
         with logger.time_log(target=extractor.__class__.__name__):
-            return extractor(df)
+            return extractor(df).astype(np.float32)
 
     features_df = pd.concat([df] + [_extract(df, extractor) for extractor in extractors], axis=1)
     return features_df
@@ -197,12 +197,20 @@ def join_poi_to_task_data_batched(task_df, poi_df, batch_size=1000):
     pivot_df_pl = pl.from_pandas(make_poi_cat_count_pivot_table(poi_df))
     n = len(task_df)
 
-    merged_dfs = [
-        pl.from_pandas(task_df.iloc[i : i + batch_size]).join(pivot_df_pl, on=["x", "y"], how="left").to_pandas()
-        for i in tqdm(range(0, n, batch_size), desc="join poi")
-    ]
-
-    return pd.concat(merged_dfs, axis=0).fillna(0).reset_index(drop=True)
+    return (
+        pd.concat(
+            [
+                pl.from_pandas(task_df.iloc[i : i + batch_size])
+                .join(pivot_df_pl, on=["x", "y"], how="left")
+                .to_pandas()
+                for i in tqdm(range(0, n, batch_size), desc="join poi")
+            ],
+            axis=0,
+        )
+        .fillna(0)
+        .reset_index(drop=True)
+        .astype(np.int16)
+    )
 
 
 def add_poi_features(df, poi_df, batch_size=100000):
