@@ -1,7 +1,7 @@
 global:
   project: "HuMob-Challenge-2023"
   seed: 8823
-  debug: True
+  debug: False
   resources: "/workspace/resources"
 
 fe:
@@ -40,9 +40,9 @@ nn:
   out_dir: "001/models"
   device: ???
   padding_value: -999
-  max_epochs: 2
-  gradient_accumulation_steps: 1
-  clip_grad_norm: 10000
+  max_epochs: 4
+  gradient_accumulation_steps: 4
+  clip_grad_norm: 1
   fp16: True
   batch_scheduler: True
   iters_per_epoch: ???
@@ -50,18 +50,15 @@ nn:
 
   feature:
     feature_names: ???
-    auxiliary_names: ["f_x", "f_y"]
+    auxiliary_names: ["f_d", "f_t"]
     target_names: ["x", "y"]
 
   model:
-    type: CustomTransformerModelV1
-    input_size_src: ???
-    input_size_tgt: ???
-    d_model: 12
+    type: CustomLSTMModelV1
+    input_size1: ???
+    input_size2: ???
+    hidden_size: 1024
     output_size: ???
-    nhead: 4
-    num_encoder_layers: 6
-    num_decoder_layers: 6
 
   criterion:
     type: SeqMSELoss
@@ -94,7 +91,7 @@ nn:
         is_train_mode: True
         padding_value: "@/nn/padding_value"
         return_padding_mask: True
-      batch_size: 2
+      batch_size: 24
       num_workers: 1
       shuffle: False
       pin_memory: True
@@ -107,7 +104,7 @@ nn:
         is_train_mode: True
         padding_value: "@/nn/padding_value"
         return_padding_mask: True
-      batch_size: 2
+      batch_size: 32
       num_workers: 1
       shuffle: False
       pin_memory: True
@@ -120,7 +117,7 @@ nn:
         is_train_mode: False
         padding_value: "@/nn/padding_value"
         return_padding_mask: True
-      batch_size: 2
+      batch_size: 32
       num_workers: 1
       shuffle: False
       pin_memory: True
