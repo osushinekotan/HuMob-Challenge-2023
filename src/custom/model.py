@@ -55,7 +55,7 @@ class CustomTransformerModelV1(nn.Module):
         super().__init__()
         self.embedding_src = nn.Linear(input_size_src, d_model)
         self.embedding_tgt = nn.Linear(input_size_tgt, d_model)
-        
+
         self.transformer = nn.Transformer(
             d_model,
             nhead,
