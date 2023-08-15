@@ -2,7 +2,9 @@ from custom.dataset import TestDataset, TrainDataset
 from custom.feature.feature_extractor import (
     GroupedDiffFeatureExtractor,
     GroupedShiftFeatureExtractor,
+    GroupedSimpleFeatureExtoractor,
     RawFeatureExtractor,
+    TimeGroupedSimpleFeatureExtoractor,
 )
 from custom.helper import PadSequenceCollateFn
 from custom.metrics import GeobleuMetric, MSEMetric, SeqMSELoss
@@ -24,6 +26,8 @@ CONFIG_TYPES = dict(
     GroupedDiffFeatureExtractor=GroupedDiffFeatureExtractor,
     GroupedShiftFeatureExtractor=GroupedShiftFeatureExtractor,
     RawFeatureExtractor=RawFeatureExtractor,
+    GroupedSimpleFeatureExtoractor=GroupedSimpleFeatureExtoractor,
+    TimeGroupedSimpleFeatureExtoractor=TimeGroupedSimpleFeatureExtoractor,
     # torch dataset
     TestDataset=TestDataset,
     TrainDataset=TrainDataset,

@@ -239,7 +239,7 @@ def scaling(config, train_feature_df, test_feature_df):
     assert len(train_feature_df) == len(scaled_train_feature_df)
     assert len(test_feature_df) == len(scaled_test_feature_df)
 
-    return scaled_train_feature_df, scaled_test_feature_df
+    return scaled_train_feature_df.fillna(0), scaled_test_feature_df.fillna(0)
 
 
 def run() -> None:

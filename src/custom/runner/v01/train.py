@@ -115,9 +115,9 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
         group_key="uid",
         group_values=pre_eval_config["nn"]["feature"]["target_names"],
     )
-    logger.debug(f'featuer_seqs:\n\n{pre_eval_config["nn"]["dataset"]["train"]["feature_seqs"][0]}')
-    logger.debug(f'auxiliary_seqs:\n\n{pre_eval_config["nn"]["dataset"]["train"]["auxiliary_seqs"][0]}')
-    logger.debug(f'target_seqs:\n\n{pre_eval_config["nn"]["dataset"]["train"]["target_seqs"][0]}')
+    logger.debug(f'featuer_seqs:\n\n{pre_eval_config["nn"]["dataset"]["train"]["feature_seqs"][0][:10]}')
+    logger.debug(f'auxiliary_seqs:\n\n{pre_eval_config["nn"]["dataset"]["train"]["auxiliary_seqs"][0][:10]}')
+    logger.debug(f'target_seqs:\n\n{pre_eval_config["nn"]["dataset"]["train"]["target_seqs"][0][:10]}')
 
     # valid sequences
     pre_eval_config["nn"]["dataset"]["valid"]["feature_seqs"] = make_sequences(
