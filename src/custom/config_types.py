@@ -1,5 +1,9 @@
 from custom.dataset import TestDataset, TrainDataset
-from custom.feature.feature_extractor import GroupedDiffFeatureExtractor, RawFeatureExtractor
+from custom.feature.feature_extractor import (
+    GroupedDiffFeatureExtractor,
+    GroupedShiftFeatureExtractor,
+    RawFeatureExtractor,
+)
 from custom.helper import PadSequenceCollateFn
 from custom.metrics import GeobleuMetric, MSEMetric, SeqMSELoss
 from custom.model import CustomLSTMModelV1, CustomTransformerModelV1
@@ -18,6 +22,7 @@ CONFIG_TYPES = dict(
     StratifiedGroupKFold=StratifiedGroupKFold,
     # feature extractor
     GroupedDiffFeatureExtractor=GroupedDiffFeatureExtractor,
+    GroupedShiftFeatureExtractor=GroupedShiftFeatureExtractor,
     RawFeatureExtractor=RawFeatureExtractor,
     # torch dataset
     TestDataset=TestDataset,

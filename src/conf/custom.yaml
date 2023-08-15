@@ -1,7 +1,7 @@
 global:
   project: "HuMob-Challenge-2023"
   seed: 8823
-  debug: False
+  debug: True
   resources: "/workspace/resources"
 
 fe:
@@ -17,6 +17,18 @@ fe:
       }
     - {
         type: GroupedDiffFeatureExtractor,
+        group_key: ["uid", "d"],
+        group_values: ["t"],
+        intervals: [1, -1],
+      }
+        - {
+        type: GroupedShiftFeatureExtractor,
+        group_key: uid,
+        group_values: ["d", "x", "y"],
+        intervals: [1, -1, 2, -2],
+      }
+    - {
+        type: GroupedShiftFeatureExtractor,
         group_key: ["uid", "d"],
         group_values: ["t"],
         intervals: [1, -1],
@@ -57,7 +69,7 @@ nn:
     type: CustomLSTMModelV1
     input_size1: ???
     input_size2: ???
-    hidden_size: 1024
+    hidden_size: 2
     output_size: ???
 
   criterion:
@@ -91,7 +103,7 @@ nn:
         is_train_mode: True
         padding_value: "@/nn/padding_value"
         return_padding_mask: True
-      batch_size: 24
+      batch_size: 2
       num_workers: 4
       shuffle: False
       pin_memory: True
@@ -104,7 +116,7 @@ nn:
         is_train_mode: True
         padding_value: "@/nn/padding_value"
         return_padding_mask: True
-      batch_size: 32
+      batch_size: 2
       num_workers: 2
       shuffle: False
       pin_memory: True
@@ -117,7 +129,7 @@ nn:
         is_train_mode: False
         padding_value: "@/nn/padding_value"
         return_padding_mask: True
-      batch_size: 32
+      batch_size: 2
       num_workers: 2
       shuffle: False
       pin_memory: True
