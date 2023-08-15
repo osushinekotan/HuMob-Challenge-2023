@@ -19,7 +19,7 @@ fe:
         type: GroupedDiffFeatureExtractor,
         group_key: ["uid", "d"],
         group_values: ["t"],
-        intervals: [1, -1],
+        intervals: [1, -1, 2, -2],
       }
     - {
         type: GroupedShiftFeatureExtractor,
@@ -31,7 +31,7 @@ fe:
         type: GroupedShiftFeatureExtractor,
         group_key: ["uid", "d"],
         group_values: ["t"],
-        intervals: [1, -1],
+        intervals: [1, -1, 2, -2],
       }
     - {
         type: GroupedSimpleFeatureExtoractor,
