@@ -8,10 +8,11 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from custom.config_types import CONFIG_TYPES
+from custom.util import sort_df_numpy
 from logger import Logger
 from pytorch_pfn_extras.config import Config
 from tqdm import tqdm
-from util import load_yaml, reduce_mem_usage, sort_df_numpy
+from util import load_yaml, reduce_mem_usage
 
 logger = Logger(name="fe")
 

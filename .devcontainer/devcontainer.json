@@ -1,6 +1,6 @@
 {
   "name": "workspace",
-  "dockerComposeFile": ["../compose.gpu.yml"],
+  "dockerComposeFile": ["../compose.yml"],
   "service": "workspace",
   "workspaceFolder": "/workspace",
   "runServices": ["workspace"],
