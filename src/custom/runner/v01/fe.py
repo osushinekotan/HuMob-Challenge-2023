@@ -66,6 +66,19 @@ class TaskDatset:
     def poi_data(self) -> pd.DataFrame:
         return read_parquet_from_csv(filepath=self.dirpath / "cell_POIcat.csv.gz", dirpath=self.dirpath)
 
+    @property
+    def mesh_map(self):
+        x = list(range(1, 201))
+        y = list(range(1, 201))
+        mesh_map_df = pd.DataFrame(
+            {
+                "x": np.repeat(x, len(x)),
+                "y": np.tile(y, len(y)),
+                "mesh_id": range(len(x) * len(y)),
+            }
+        )
+        return mesh_map_df
+
 
 def convert_debug_train_df(df: pd.DataFrame, n_uids: int = 100, random_state: int | None = None):
     user_ids = df["uid"].sample(n_uids, random_state=random_state).tolist()
@@ -275,6 +288,7 @@ def run() -> None:
     raw_train_df = task_dataset.raw_train_data
     raw_test_df = task_dataset.raw_test_data
     poi_df = task_dataset.poi_data
+    mesh_map_df = task_dataset.mesh_map
 
     if DEBUG:
         raw_train_df = convert_debug_train_df(
@@ -287,6 +301,10 @@ def run() -> None:
             n_uids=100,
             random_state=config["/global/seed"],
         )
+
+    # add mesh_id
+    raw_train_df = pd.merge(raw_train_df, mesh_map_df, how="left", on=["x", "y"])
+    raw_test_df = pd.merge(raw_test_df, mesh_map_df, how="left", on=["x", "y"])
 
     # add POIcat features (f_*)
     if config["/fe/use_poi_features"]:
