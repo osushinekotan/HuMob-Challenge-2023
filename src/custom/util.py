@@ -2,6 +2,7 @@ import gc
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 
 def sort_df_numpy(df):
@@ -51,3 +52,33 @@ def sort_df(df):
         .reset_index(drop=True)
         .drop("nunique_uid", axis=1)
     )
+
+
+def get_neighbors(i, j, n):
+    directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+    neighbors = []
+    for di, dj in directions:
+        ni, nj = i + di, j + dj
+        if 0 <= ni < n and 0 <= nj < n:
+            neighbors.append(nj * n + ni)
+    return neighbors
+
+
+def generate_adjacency_matrix(n=200):
+    adj_matrix = np.zeros((n * n, n * n), dtype=int)
+
+    for i in tqdm(range(n)):
+        for j in range(n):
+            mesh_id = j * n + i
+            for neighbor_id in get_neighbors(i, j, n):
+                adj_matrix[mesh_id][neighbor_id] = 1
+
+    return adj_matrix
+
+
+def get_kth_adjacency(adj_matrix, k):
+    if k >= 2:
+        kth_adj = np.linalg.matrix_power(adj_matrix, k)
+        kth_adj[kth_adj > 1] = 1
+        return kth_adj
+    return adj_matrix
