@@ -9,6 +9,7 @@ from custom.feature.feature_extractor import (
 from custom.helper import PadSequenceCollateFn
 from custom.metrics import GeobleuMetric, MSEMetric, SeqMSELoss
 from custom.model import CustomLSTMModelV1, CustomTransformerModelV1
+from sklearn.decomposition import NMF, PCA
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.preprocessing import StandardScaler
 from torch import nn
@@ -28,6 +29,9 @@ CONFIG_TYPES = dict(
     RawFeatureExtractor=RawFeatureExtractor,
     GroupedSimpleFeatureExtoractor=GroupedSimpleFeatureExtoractor,
     TimeGroupedSimpleFeatureExtoractor=TimeGroupedSimpleFeatureExtoractor,
+    # decomposer
+    NMF=NMF,
+    PCA=PCA,
     # torch dataset
     TestDataset=TestDataset,
     TrainDataset=TrainDataset,

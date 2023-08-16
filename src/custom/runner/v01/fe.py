@@ -188,14 +188,26 @@ def add_fold_index(config: Config, df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def make_poi_cat_count_pivot_table(df):
+def make_poi_cat_count_pivot_table(config, df):
     poi_cat_cnt_df = pd.pivot_table(df, columns=["POIcategory"], index=["x", "y"]).fillna(0)
     poi_cat_cnt_df.columns = [f"POIcat_{x[1]:02}_count" for x in poi_cat_cnt_df.columns]
-    return poi_cat_cnt_df.astype(np.int16).reset_index()
+
+    decomposer = config["/fe/poi_decomposer"]
+    decomposed_poi_df = pd.DataFrame(
+        decomposer.fit_transform(poi_cat_cnt_df.to_numpy()),
+        columns=[f"POI_d{x:02}" for x in range(decomposer.n_components)],
+    )
+    return pd.concat(
+        [
+            poi_cat_cnt_df.astype(np.int16).reset_index(),
+            decomposed_poi_df,
+        ],
+        axis=1,
+    )
 
 
-def join_poi_to_task_data_batched(task_df, poi_df, batch_size=1000):
-    pivot_df_pl = pl.from_pandas(make_poi_cat_count_pivot_table(poi_df))
+def join_poi_to_task_data_batched(config, task_df, poi_df, batch_size=1000):
+    pivot_df_pl = pl.from_pandas(make_poi_cat_count_pivot_table(config, poi_df))
     n = len(task_df)
 
     return (
@@ -214,8 +226,8 @@ def join_poi_to_task_data_batched(task_df, poi_df, batch_size=1000):
     )
 
 
-def add_poi_features(df, poi_df, batch_size=100000):
-    merged_df = join_poi_to_task_data_batched(task_df=df, poi_df=poi_df, batch_size=batch_size)
+def add_poi_features(config, df, poi_df, batch_size=100000):
+    merged_df = join_poi_to_task_data_batched(config=config, task_df=df, poi_df=poi_df, batch_size=batch_size)
     merged_df.columns = [f"f_{x}" if x.startswith("POIcat_") else x for x in merged_df.columns]
     return merged_df
 
@@ -271,8 +283,9 @@ def run() -> None:
 
     # add POIcat features (f_*)
     if config["/fe/use_poi_features"]:
-        raw_train_df = add_poi_features(df=raw_train_df, poi_df=poi_df)
-        raw_test_df = add_poi_features(df=raw_test_df, poi_df=poi_df)
+        with logger.time_log("make poi features"):
+            raw_train_df = add_poi_features(config=config, df=raw_train_df, poi_df=poi_df)
+            raw_test_df = add_poi_features(config=config, df=raw_test_df, poi_df=poi_df)
 
     # copy original target
     raw_train_df = add_original_raw_targets(raw_train_df)

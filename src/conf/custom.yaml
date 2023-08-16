@@ -8,6 +8,11 @@ fe:
   out_dir: "001/features"
   overwrite: False
   dataset: "task2_dataset"
+  use_poi_features: True
+  poi_decomposer:
+    type: NMF
+    n_components: 10
+    random_state: "@/global/seed"
   extractors:
     - {
         type: GroupedDiffFeatureExtractor,
@@ -24,7 +29,22 @@ fe:
     - {
         type: GroupedShiftFeatureExtractor,
         group_key: uid,
-        group_values: ["d", "x", "y"],
+        group_values:
+          [
+            "d",
+            "x",
+            "y",
+            "POI_d00",
+            "POI_d01",
+            "POI_d02",
+            "POI_d03",
+            "POI_d04",
+            "POI_d05",
+            "POI_d06",
+            "POI_d07",
+            "POI_d08",
+            "POI_d09",
+          ],
         intervals: [1, -1, 2, -2],
       }
     - {
@@ -60,7 +80,7 @@ fe:
         time_range: { "t": [38, 48] }, # 19~24
       }
     - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] } # + poi features
-  use_poi_features: True
+
   regression_target_transform: log
   scaling:
     type: StandardScaler
