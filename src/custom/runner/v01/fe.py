@@ -254,6 +254,13 @@ def scaling(config, train_feature_df, test_feature_df):
     return scaled_train_feature_df.fillna(0), scaled_test_feature_df.fillna(0)
 
 
+def assign_d_cycle_number(config, df):
+    cycles = config["/fe/cycles"]
+    for cycle in cycles:
+        df[f"cycle_{cycle:02}"] = np.array([x // cycle for x in df["d"]], dtype=np.int16)
+    return df
+
+
 def run() -> None:
     # set config
     pre_eval_config = load_yaml()
@@ -286,6 +293,10 @@ def run() -> None:
         with logger.time_log("make poi features"):
             raw_train_df = add_poi_features(config=config, df=raw_train_df, poi_df=poi_df)
             raw_test_df = add_poi_features(config=config, df=raw_test_df, poi_df=poi_df)
+
+    # assign cycle number
+    raw_train_df = assign_d_cycle_number(config, df=raw_train_df)
+    raw_test_df = assign_d_cycle_number(config, df=raw_test_df)
 
     # copy original target
     raw_train_df = add_original_raw_targets(raw_train_df)

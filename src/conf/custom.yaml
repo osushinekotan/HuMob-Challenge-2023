@@ -13,11 +13,12 @@ fe:
     type: NMF
     n_components: 10
     random_state: "@/global/seed"
+  cycles: [7, 14]
   extractors:
     - {
         type: GroupedDiffFeatureExtractor,
         group_key: uid,
-        group_values: ["d", "x", "y"],
+        group_values: ["d", "x", "y", "cycle_07", "cycle_14"],
         intervals: [1, -1, 2, -2],
       }
     - {
@@ -29,22 +30,7 @@ fe:
     - {
         type: GroupedShiftFeatureExtractor,
         group_key: uid,
-        group_values:
-          [
-            "d",
-            "x",
-            "y",
-            "POI_d00",
-            "POI_d01",
-            "POI_d02",
-            "POI_d03",
-            "POI_d04",
-            "POI_d05",
-            "POI_d06",
-            "POI_d07",
-            "POI_d08",
-            "POI_d09",
-          ],
+        group_values: ["d", "x", "y"],
         intervals: [1, -1, 2, -2],
       }
     - {
@@ -74,7 +60,35 @@ fe:
       }
     - {
         type: TimeGroupedSimpleFeatureExtoractor,
+        group_key: ["uid", "cycle_07"],
+        group_values: ["x", "y"],
+        agg_methods: ["min", "max", "mean", "median"],
+        time_range: { "t": [16, 36] }, # 8~18
+      }
+    - {
+        type: TimeGroupedSimpleFeatureExtoractor,
+        group_key: ["uid", "cycle_14"],
+        group_values: ["x", "y"],
+        agg_methods: ["min", "max", "mean", "median"],
+        time_range: { "t": [16, 36] }, # 8~18
+      }
+    - {
+        type: TimeGroupedSimpleFeatureExtoractor,
         group_key: ["uid", "d"],
+        group_values: ["x", "y"],
+        agg_methods: ["min", "max", "mean", "median"],
+        time_range: { "t": [38, 48] }, # 19~24
+      }
+    - {
+        type: TimeGroupedSimpleFeatureExtoractor,
+        group_key: ["uid", "cycle_07"],
+        group_values: ["x", "y"],
+        agg_methods: ["min", "max", "mean", "median"],
+        time_range: { "t": [38, 48] }, # 19~24
+      }
+    - {
+        type: TimeGroupedSimpleFeatureExtoractor,
+        group_key: ["uid", "cycle_14"],
         group_values: ["x", "y"],
         agg_methods: ["min", "max", "mean", "median"],
         time_range: { "t": [38, 48] }, # 19~24
