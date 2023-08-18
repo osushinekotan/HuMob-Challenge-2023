@@ -121,7 +121,7 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
 
     # valid sequences
     pre_eval_config["nn"]["dataset"]["valid"]["feature_seqs"] = make_sequences(
-        df=valid_feature_df,
+        df=valid_feature_df.query(f"d < {lower_target_d}"),
         group_key="uid",
         group_values=feature_names,
     )

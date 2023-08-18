@@ -74,7 +74,7 @@ def set_config(pre_eval_config: dict, test_feature_df: pd.DataFrame) -> Config:
 
     # test sequences
     pre_eval_config["nn"]["dataset"]["test"]["feature_seqs"] = make_sequences(
-        df=test_feature_df,
+        df=test_feature_df.query(f"d < {lower_target_d}"),
         group_key="uid",
         group_values=feature_names,
     )
