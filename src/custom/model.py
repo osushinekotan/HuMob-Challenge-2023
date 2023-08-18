@@ -123,7 +123,7 @@ class GraphGRUCell(nn.Module):
         return new_hidden  # shape: (batch_size, hidden_features)
 
 
-class DynamicGraphLSTM(nn.Module):
+class DynamicGraphLSTMV1(nn.Module):
     def __init__(
         self,
         in_features_sage,
@@ -144,39 +144,32 @@ class DynamicGraphLSTM(nn.Module):
         self.lstm2 = nn.LSTM(input_size2_lstm, hidden_size_lstm, batch_first=True, bidirectional=True)
         self.out = nn.Linear(hidden_size_lstm * 2, output_size)
 
-    def forward(
-        self,
-        central_node_features,
-        neighbor_node_features,
-        mask,
-        feature_seqs,
-        auxiliary_seqs,
-    ):
-        batch_size, sequence_len, _ = central_node_features.shape
+    def forward(self, batch):
+        batch_size, sequence_len, _ = batch["central_node_feature_seqs"].shape
         hidden_features_sage = self.hidden_features_sage
         hidden_features_lstm = self.hidden_size_lstm
 
-        h_sage = torch.zeros(batch_size, hidden_features_sage, device=central_node_features.device)
-        h_lstm1 = torch.zeros(batch_size, hidden_features_lstm, device=central_node_features.device)
-        c_lstm1 = torch.zeros(batch_size, hidden_features_lstm, device=central_node_features.device)
+        h_sage = torch.zeros(batch_size, hidden_features_sage, device=batch["central_node_feature_seqs"].device)
+        h_lstm1 = torch.zeros(batch_size, hidden_features_lstm, device=batch["central_node_feature_seqs"].device)
+        c_lstm1 = torch.zeros(batch_size, hidden_features_lstm, device=batch["central_node_feature_seqs"].device)
 
         for i in range(sequence_len):
             h_sage = self.graphsage_cell(
-                central_node_features[:, i, :],
-                neighbor_node_features[:, i, :, :],
-                mask[:, i, :],
+                batch["central_node_feature_seqs"][:, i, :],
+                batch["neighbor_node_feature_seqs"][:, i, :, :],
+                batch["neighbor_node_mask"][:, i, :],
                 h_sage,
             )  # shape: (batch_size, hidden_features_sage)
 
             combined_input = torch.cat(
-                [h_sage, feature_seqs[:, i, :]], dim=1
+                [h_sage, batch["feature_seqs"][:, i, :]], dim=1
             )  # shape: (batch_size, hidden_features_sage + input_size1_lstm)
             h_lstm1, c_lstm1 = self.lstm_cell_1(combined_input, (h_lstm1, c_lstm1))
 
         h_lstm1 = h_lstm1.repeat(2, 1, 1)  # to input bidirectional
         c_lstm1 = c_lstm1.repeat(2, 1, 1)
         lstm2_outputs, _ = self.lstm2(
-            auxiliary_seqs, (h_lstm1, c_lstm1)
+            batch["auxiliary_seqs"], (h_lstm1, c_lstm1)
         )  # shape: (batch_size, sequence_len, hidden_size_lstm * 2)
         outputs = self.out(lstm2_outputs)  # shape: (batch_size, sequence_len, output_size)
 

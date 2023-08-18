@@ -107,17 +107,16 @@ class PadSequenceWithNodeCollateFn:
             padding_value=self.padding_value,
         )  # (sequence_len, neighbor_node_num, node_feature_dim)
 
-        batch = {
-            "feature_seqs": feature_seqs_padded,
-            "auxiliary_seqs": auxiliary_seqs_padded,
-            "feature_lengths": feature_lengths,
-            "auxiliary_lengths": auxiliary_lengths,
-            "central_node_feature_seqs": central_node_feature_seqs_padded,
-            "neighbor_node_feature_seqs": neighbor_node_feature_seqs_padded,
-            "neighbor_node_mask": neighbor_node_mask,
-        }
-
         if not self.is_train_mode:
+            batch = {
+                "feature_seqs": feature_seqs_padded,
+                "auxiliary_seqs": auxiliary_seqs_padded,
+                "feature_lengths": feature_lengths,
+                "auxiliary_lengths": auxiliary_lengths,
+                "central_node_feature_seqs": central_node_feature_seqs_padded,
+                "neighbor_node_feature_seqs": neighbor_node_feature_seqs_padded,
+                "neighbor_node_mask": neighbor_node_mask,
+            }
             if self.return_padding_mask:
                 batch = {
                     **batch,
@@ -134,7 +133,17 @@ class PadSequenceWithNodeCollateFn:
             batch_first=True,
             padding_value=self.padding_value,
         )  # (sequence_len, target_dim)
-        batch["target_seqs"] = target_seqs_padded
+
+        batch = {
+            "feature_seqs": feature_seqs_padded,
+            "auxiliary_seqs": auxiliary_seqs_padded,
+            "target_seqs": target_seqs_padded,
+            "feature_lengths": feature_lengths,
+            "auxiliary_lengths": auxiliary_lengths,
+            "central_node_feature_seqs": central_node_feature_seqs_padded,
+            "neighbor_node_feature_seqs": neighbor_node_feature_seqs_padded,
+            "neighbor_node_mask": neighbor_node_mask,
+        }
         if self.return_padding_mask:
             batch = {
                 **batch,

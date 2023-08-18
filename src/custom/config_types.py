@@ -1,4 +1,4 @@
-from custom.dataset import TestDataset, TrainDataset
+from custom.dataset import TestDataset, TestDatasetV02, TrainDataset, TrainDatasetV02
 from custom.feature.feature_extractor import (
     GroupedDiffFeatureExtractor,
     GroupedShiftFeatureExtractor,
@@ -6,9 +6,9 @@ from custom.feature.feature_extractor import (
     RawFeatureExtractor,
     TimeGroupedSimpleFeatureExtoractor,
 )
-from custom.helper import PadSequenceCollateFn
+from custom.helper import PadSequenceCollateFn, PadSequenceWithNodeCollateFn
 from custom.metrics import GeobleuMetric, MSEMetric, SeqMSELoss
-from custom.model import CustomLSTMModelV1, CustomTransformerModelV1
+from custom.model import CustomLSTMModelV1, CustomTransformerModelV1, DynamicGraphLSTMV1
 from sklearn.decomposition import NMF, PCA
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.preprocessing import StandardScaler
@@ -35,12 +35,16 @@ CONFIG_TYPES = dict(
     # torch dataset
     TestDataset=TestDataset,
     TrainDataset=TrainDataset,
+    TrainDatasetV02=TrainDatasetV02,
+    TestDatasetV02=TestDatasetV02,
     # torch dataloader
     DataLoader=DataLoader,
     PadSequenceCollateFn=PadSequenceCollateFn,
+    PadSequenceWithNodeCollateFn=PadSequenceWithNodeCollateFn,
     # model
     CustomLSTMModelV1=CustomLSTMModelV1,
     CustomTransformerModelV1=CustomTransformerModelV1,
+    DynamicGraphLSTMV1=DynamicGraphLSTMV1,
     # optimizer
     AdamW=AdamW,
     # scheduler

@@ -8,13 +8,14 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from custom.config_types import CONFIG_TYPES
-from custom.util import sort_df_numpy
+from custom.util import generate_adjacency_matrix, sort_df_numpy
 from logger import Logger
 from pytorch_pfn_extras.config import Config
 from tqdm import tqdm
-from util import generate_adjacency_matrix, load_yaml, reduce_mem_usage
+from util import load_yaml, reduce_mem_usage
 
 logger = Logger(name="fe")
+tqdm.pandas()
 
 
 class TaskDatset:
@@ -235,7 +236,6 @@ def join_poi_to_task_data_batched(config, task_df, poi_df, batch_size=1000):
         )
         .fillna(0)
         .reset_index(drop=True)
-        .astype(np.int16)
     )
 
 
@@ -304,6 +304,7 @@ def make_mesh_map_df(adj_matrix, padding_value=-1):
 
 def make_node_features(mesh_map_df, poi_df):
     poi_cat_cnt_df = pd.pivot_table(poi_df, columns=["POIcategory"], index=["x", "y"]).fillna(0)
+    poi_cat_cnt_df.columns = [f"POIcat_{x[1]:02}_count" for x in poi_cat_cnt_df.columns]
     node_feature = (
         pd.merge(
             mesh_map_df.drop("neighbor_mesh_ids", axis=1),

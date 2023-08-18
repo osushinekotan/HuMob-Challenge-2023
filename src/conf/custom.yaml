@@ -85,10 +85,13 @@ nn:
     target_names: ["x", "y"]
 
   model:
-    type: CustomLSTMModelV1
-    input_size1: ???
-    input_size2: ???
-    hidden_size: 2
+    type: DynamicGraphLSTMV1
+    in_features_sage: ??? # node feature
+    hidden_features_sage: 2
+    embed_features_sage: 4
+    input_size1_lstm: ???
+    input_size2_lstm: ???
+    hidden_size_lstm: 4
     output_size: ???
 
   criterion:
@@ -99,31 +102,37 @@ nn:
 
   dataset:
     train:
-      type: TrainDataset
+      type: TrainDatasetV02
       feature_seqs: ???
       auxiliary_seqs: ???
       target_seqs: ???
+      central_node_feature_seqs: ???
+      neighbor_node_feature_seqs: ???
     valid:
-      type: TrainDataset
+      type: TrainDatasetV02
       feature_seqs: ???
       auxiliary_seqs: ???
       target_seqs: ???
+      central_node_feature_seqs: ???
+      neighbor_node_feature_seqs: ???
     test:
-      type: TestDataset
+      type: TestDatasetV02
       feature_seqs: ???
       auxiliary_seqs: ???
+      central_node_feature_seqs: ???
+      neighbor_node_feature_seqs: ???
 
   dataloader:
     train:
       type: DataLoader
       dataset: "@/nn/dataset/train"
       collate_fn:
-        type: PadSequenceCollateFn
+        type: PadSequenceWithNodeCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
-        return_padding_mask: True
-      batch_size: 2
-      num_workers: 4
+        return_padding_mask: False
+      batch_size: 1
+      num_workers: 1
       shuffle: False
       pin_memory: True
       drop_last: True
@@ -131,12 +140,12 @@ nn:
       type: DataLoader
       dataset: "@/nn/dataset/valid"
       collate_fn:
-        type: PadSequenceCollateFn
+        type: PadSequenceWithNodeCollateFn
         is_train_mode: True
         padding_value: "@/nn/padding_value"
-        return_padding_mask: True
-      batch_size: 2
-      num_workers: 2
+        return_padding_mask: False
+      batch_size: 1
+      num_workers: 1
       shuffle: False
       pin_memory: True
       drop_last: False
@@ -144,12 +153,12 @@ nn:
       type: DataLoader
       dataset: "@/nn/dataset/test"
       collate_fn:
-        type: PadSequenceCollateFn
+        type: PadSequenceWithNodeCollateFn
         is_train_mode: False
         padding_value: "@/nn/padding_value"
-        return_padding_mask: True
-      batch_size: 2
-      num_workers: 2
+        return_padding_mask: False
+      batch_size: 1
+      num_workers: 1
       shuffle: False
       pin_memory: True
       drop_last: False

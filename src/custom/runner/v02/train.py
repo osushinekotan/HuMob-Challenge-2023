@@ -63,21 +63,28 @@ def calc_steps(
     return training_steps, iters_per_epoch
 
 
-def set_model_config(pre_eval_config: dict, feature_names, auxiliary_names):
+def set_model_config(pre_eval_config: dict, feature_names, auxiliary_names, node_feature_names):
     # model
     if pre_eval_config["nn"]["model"]["type"].startswith("CustomLSTMModel"):
         pre_eval_config["nn"]["model"]["input_size1"] = len(feature_names)
         pre_eval_config["nn"]["model"]["input_size2"] = len(auxiliary_names)
         pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
-        return pre_eval_config
 
     elif pre_eval_config["nn"]["model"]["type"].startswith("CustomTransformerModel"):
         pre_eval_config["nn"]["model"]["input_size_src"] = len(feature_names)
         pre_eval_config["nn"]["model"]["input_size_tgt"] = len(auxiliary_names)
         pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
-        return pre_eval_config
+
+    elif pre_eval_config["nn"]["model"]["type"].startswith("DynamicGraphLSTM"):
+        pre_eval_config["nn"]["model"]["in_features_sage"] = len(node_feature_names)
+        pre_eval_config["nn"]["model"]["input_size1_lstm"] = len(feature_names)
+        pre_eval_config["nn"]["model"]["input_size2_lstm"] = len(auxiliary_names)
+        pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
+
     else:
         raise NotImplementedError()
+
+    return pre_eval_config
 
 
 def set_config(
@@ -112,24 +119,24 @@ def set_config(
         else [x for x in train_feature_df.columns if x.startswith("f_d") or x.startswith("f_t")]
     )
 
-    central_node_names = [x for x in train_feature_df.columns if x.startswith("fn_")]
+    node_feature_names = [x for x in train_feature_df.columns if x.startswith("fn_")]
     logger.info(f"feature_names : {feature_names}")
     logger.info(f"auxiliary_names : {auxiliary_names}")
-    logger.info(f"central_node_names : {central_node_names[:5]}")
+    logger.info(f"node_feature_names : {node_feature_names[:5]}")
 
     # target (fix)
     lower_target_d = 60
 
     # train sequences
     pre_eval_config["nn"]["dataset"]["train"]["feature_seqs"] = make_sequences(
-        df=train_feature_df,
+        df=train_feature_df,  # NOTE : d 60未満にする必要ある？
         group_key="uid",
         group_values=feature_names,
     )
     pre_eval_config["nn"]["dataset"]["train"]["central_node_feature_seqs"] = make_sequences(
         df=train_feature_df,
         group_key="uid",
-        group_values=central_node_names,
+        group_values=node_feature_names,
     )
     pre_eval_config["nn"]["dataset"]["train"]["neighbor_node_feature_seqs"] = make_neighbor_node_sequences(
         df=train_feature_df,
@@ -153,9 +160,19 @@ def set_config(
 
     # valid sequences
     pre_eval_config["nn"]["dataset"]["valid"]["feature_seqs"] = make_sequences(
-        df=valid_feature_df,
+        df=valid_feature_df.query(f"d < {lower_target_d}"),
         group_key="uid",
         group_values=feature_names,
+    )
+    pre_eval_config["nn"]["dataset"]["valid"]["central_node_feature_seqs"] = make_sequences(
+        df=valid_feature_df.query(f"d < {lower_target_d}"),
+        group_key="uid",
+        group_values=node_feature_names,
+    )
+    pre_eval_config["nn"]["dataset"]["valid"]["neighbor_node_feature_seqs"] = make_neighbor_node_sequences(
+        df=valid_feature_df.query(f"d < {lower_target_d}"),
+        node_feature=node_feature,
+        group_key="uid",
     )
     pre_eval_config["nn"]["dataset"]["valid"]["auxiliary_seqs"] = make_sequences(
         df=valid_feature_df.query(f"d >= {lower_target_d}"),
@@ -169,7 +186,12 @@ def set_config(
     )
 
     # model
-    pre_eval_config = set_model_config(pre_eval_config, feature_names, auxiliary_names)
+    pre_eval_config = set_model_config(
+        pre_eval_config,
+        feature_names,
+        auxiliary_names,
+        node_feature_names,
+    )
 
     # check
     assert (
@@ -344,7 +366,7 @@ def run() -> None:
     )
 
     feature_df = load_feature_df(pre_eval_config=pre_eval_config, name="train_feature_df")
-    node_feature = load_feature_df(pre_eval_config=pre_eval_config, name="node_feature")  # NOTE : not df
+    node_feature = load_feature_df(pre_eval_config=pre_eval_config, name="node_features")  # NOTE : not df
 
     with logger.time_log("train_fold"):
         oof_outputs = train_fold(pre_eval_config, df=feature_df, node_feature=node_feature, out_dir=out_dir)
