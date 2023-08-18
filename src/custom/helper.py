@@ -70,6 +70,97 @@ class PadSequenceCollateFn:
         return batch
 
 
+class PadSequenceWithNodeCollateFn:
+    def __init__(self, is_train_mode=True, padding_value=-1, return_padding_mask=False):
+        self.is_train_mode = is_train_mode
+        self.padding_value = padding_value
+        self.return_padding_mask = return_padding_mask
+
+    def __call__(self, batch):
+        feature_seqs = [item["feature_seqs"] for item in batch]
+        auxiliary_seqs = [item["auxiliary_seqs"] for item in batch]
+        central_node_feature_seqs = [item["central_node_feature_seqs"] for item in batch]
+        neighbor_node_feature_seqs = [item["neighbor_node_feature_seqs"] for item in batch]
+
+        feature_lengths = [len(seq) for seq in feature_seqs]
+        auxiliary_lengths = [len(seq) for seq in auxiliary_seqs]
+
+        feature_seqs_padded = pad_sequence(
+            [(seq) for seq in feature_seqs],
+            batch_first=True,
+            padding_value=self.padding_value,
+        )  # (sequence_len, feature_dim)
+        auxiliary_seqs_padded = pad_sequence(
+            [(seq) for seq in auxiliary_seqs],
+            batch_first=True,
+            padding_value=self.padding_value,
+        )  # (sequence_len, feature_dim)
+
+        central_node_feature_seqs_padded = pad_sequence(
+            [(seq) for seq in central_node_feature_seqs],
+            batch_first=True,
+            padding_value=self.padding_value,
+        )  # (sequence_len, node_feature_dim)
+
+        neighbor_node_feature_seqs_padded, neighbor_node_mask = pad_3d_sequences(
+            [(seq) for seq in neighbor_node_feature_seqs],
+            padding_value=self.padding_value,
+        )  # (sequence_len, neighbor_node_num, node_feature_dim)
+
+        batch = {
+            "feature_seqs": feature_seqs_padded,
+            "auxiliary_seqs": auxiliary_seqs_padded,
+            "feature_lengths": feature_lengths,
+            "auxiliary_lengths": auxiliary_lengths,
+            "central_node_feature_seqs": central_node_feature_seqs_padded,
+            "neighbor_node_feature_seqs": neighbor_node_feature_seqs_padded,
+            "neighbor_node_mask": neighbor_node_mask,
+        }
+
+        if not self.is_train_mode:
+            if self.return_padding_mask:
+                batch = {
+                    **batch,
+                    **{
+                        "feature_padding_mask": (feature_seqs_padded[:, :, 0] == self.padding_value).bool(),
+                        "auxiliary_padding_mask": (auxiliary_seqs_padded[:, :, 0] == self.padding_value).bool(),
+                    },
+                }
+            return batch
+
+        target_seqs = [item["target_seqs"] for item in batch]
+        target_seqs_padded = pad_sequence(
+            [(seq) for seq in target_seqs],
+            batch_first=True,
+            padding_value=self.padding_value,
+        )  # (sequence_len, target_dim)
+        batch["target_seqs"] = target_seqs_padded
+        if self.return_padding_mask:
+            batch = {
+                **batch,
+                **{
+                    "feature_padding_mask": (feature_seqs_padded[:, :, 0] == self.padding_value).bool(),
+                    "auxiliary_padding_mask": (auxiliary_seqs_padded[:, :, 0] == self.padding_value).bool(),
+                },
+            }
+        return batch
+
+
+def pad_3d_sequences(sequences, padding_value=0.0):
+    seq_lengths = [seq.size(0) for seq in sequences]
+    max_seq_len = max(seq_lengths)
+    batch_size, num_neighbor_node, feature_dim = len(sequences), sequences[0].size(1), sequences[0].size(2)
+
+    padded_tensor = torch.full((batch_size, max_seq_len, num_neighbor_node, feature_dim), padding_value)
+    mask = torch.zeros(batch_size, max_seq_len, num_neighbor_node, dtype=torch.bool)
+
+    for i, seq in enumerate(sequences):
+        padded_tensor[i, : seq_lengths[i]] = seq
+        mask[i, : seq_lengths[i]] = True
+
+    return padded_tensor, mask
+
+
 def to_device(batch, device):
     for k, v in batch.items():
         if not k.endswith("lengths"):
