@@ -179,8 +179,7 @@ def make_features(
         with logger.time_log(target=extractor.__class__.__name__):
             return extractor(df).astype(np.float32)
 
-    features_df = pd.concat([df] + [_extract(df, extractor) for extractor in extractors], axis=1)
-    return features_df
+    return pd.concat([df] + [_extract(df, extractor) for extractor in extractors], axis=1)
 
 
 def save_features(config, features_df, name):
@@ -200,6 +199,7 @@ def add_fold_index(config: Config, df: pd.DataFrame) -> pd.DataFrame:
         cv = config["/cv/strategy"]
         for i_fold, (tr_idx, va_idx) in enumerate(cv.split(X=df, y=df["fold"], groups=df["uid"])):
             df.loc[va_idx, "fold"] = i_fold
+        logger.info(f"df : {df.shape}")
     return df
 
 
@@ -378,6 +378,10 @@ def run() -> None:
 
     # add fold index
     raw_train_df = add_fold_index(config=config, df=raw_train_df)
+
+    # reduce mem usage
+    raw_train_df = reduce_mem_usage(raw_train_df, verbose=True)
+    raw_test_df = reduce_mem_usage(raw_test_df, verbose=True)
 
     # target enginineering
     train_feature_df = transform_regression_target(config=config, df=raw_train_df)

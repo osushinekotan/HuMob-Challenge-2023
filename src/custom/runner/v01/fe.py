@@ -178,8 +178,7 @@ def make_features(
         with logger.time_log(target=extractor.__class__.__name__):
             return extractor(df).astype(np.float32)
 
-    features_df = pd.concat([df] + [_extract(df, extractor) for extractor in extractors], axis=1)
-    return features_df
+    return pd.concat([df] + [_extract(df, extractor) for extractor in extractors], axis=1)
 
 
 def save_features(config, features_df, name):
