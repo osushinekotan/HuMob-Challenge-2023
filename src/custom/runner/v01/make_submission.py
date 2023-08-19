@@ -2,9 +2,7 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
-from custom.runner.v01.train import retransform_regression_taget
 from logger import Logger
-from pytorch_pfn_extras.config import Config
 from util import load_yaml
 
 logger = Logger(name="make_submission")
@@ -12,14 +10,12 @@ logger = Logger(name="make_submission")
 
 def run():
     pre_eval_config = load_yaml()
-    config = Config(pre_eval_config)
 
     out_dir = Path(pre_eval_config["global"]["resources"]) / "output"
 
     test_predictions = joblib.load(
         out_dir / pre_eval_config["nn"]["out_dir"] / pre_eval_config["fe"]["dataset"] / "test_outputs.pkl"
     )
-    test_predictions = retransform_regression_taget(config=config, outputs=test_predictions)
     test_df = (
         joblib.load(
             out_dir / pre_eval_config["fe"]["out_dir"] / pre_eval_config["fe"]["dataset"] / "test_feature_df.pkl"

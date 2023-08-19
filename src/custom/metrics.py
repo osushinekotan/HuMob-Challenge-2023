@@ -12,7 +12,7 @@ logger = Logger(name="metrics")
 
 
 class MSEMetric:
-    def __init__(self, squared=True, higher_is_better=True):
+    def __init__(self, squared=False, higher_is_better=True):
         self.squared = squared
         self.higher_is_better = higher_is_better
         self.score_naem = "rmse_score" if self.squared else "mse_score"
@@ -28,11 +28,11 @@ class MSEMetric:
 
 
 class GeobleuMetric:
-    def __init__(self, processes=3, sampling_ratio=None, seed=0) -> None:
+    def __init__(self, processes=3, sample_size=None, seed=0) -> None:
         # dtw_score : smaller is better
         # geobleu_score : larger is better
         self.processes = processes
-        self.sampling_ratio = sampling_ratio  # too heavy metrics...
+        self.sample_size = sample_size  # too heavy metrics...
         self.seed = seed
 
     def __call__(self, output, target, **kwargs) -> Any:
@@ -42,13 +42,12 @@ class GeobleuMetric:
         generated = np.concatenate([kwargs["info"], output], axis=1)
         reference = np.concatenate([kwargs["info"], target], axis=1)
 
-        if self.sampling_ratio:
+        if self.sample_size:
             np.random.seed(self.seed)
             n = len(generated)
-            sample_size = int(n * self.sampling_ratio)
-            selected_index_arr = np.random.choice(list(range(n)), sample_size, replace=False)
+            selected_index_arr = np.random.choice(list(range(n)), self.sample_size, replace=False)
 
-            logger.debug(f"sampling size : {sample_size}, head : {selected_index_arr[:5]}")
+            logger.debug(f"sampling size : {self.sample_size}, head : {selected_index_arr[:5]}")
 
             generated = generated[selected_index_arr]
             reference = reference[selected_index_arr]

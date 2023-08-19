@@ -170,9 +170,16 @@ def get_wandb_run_name(config: Config) -> str:
     return name
 
 
-def retransform_regression_taget(config: Config, outputs: np.ndarray) -> np.ndarray:
+def retransform_regression_target(config: Config, outputs: np.ndarray, data=None) -> np.ndarray:
     if config["/fe/regression_target_transform"] == "log":
         outputs = np.exp(outputs).astype(int)
+        outputs[outputs < 1] = 1
+        outputs[outputs > 200] = 200
+        return outputs
+
+    elif config["/fe/regression_target_transform"] == "mean_diff":
+        assert len(data) == len(outputs)
+        outputs = outputs + data[["x_mean", "y_mean"]]
         outputs[outputs < 1] = 1
         outputs[outputs > 200] = 200
         return outputs
@@ -235,7 +242,9 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
         logger.debug(f'outputs: {va_output["outputs"].shape}')
         with logger.time_log("calc metrics"):
             eval_score = metrics(
-                output=retransform_regression_taget(config=config, outputs=va_output["outputs"]),
+                output=retransform_regression_target(
+                    config=config, outputs=va_output["outputs"], data=valid_data.query("d >= 60")
+                ),
                 target=valid_data.query("d >= 60")[["original_x", "original_y"]].to_numpy(),
                 # info=valid_data[["d", "t"]].query("d >= 60").to_numpy(),
             )

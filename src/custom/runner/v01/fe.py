@@ -136,16 +136,6 @@ def add_original_raw_targets(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def transform_regression_target(config: Config, df: pd.DataFrame) -> pd.DataFrame:
-    target_mask = np.array(df["original_x"] != 999, dtype=bool)
-    if config["/fe/regression_target_transform"] == "log":
-        df.loc[target_mask, ["x", "y"]] = np.log(df.loc[target_mask, ["original_x", "original_y"]].to_numpy())
-        return df
-
-    else:
-        raise NotImplementedError()
-
-
 def make_features(
     config: Config,
     df: pd.DataFrame,
@@ -261,6 +251,56 @@ def assign_d_cycle_number(config, df):
     return df
 
 
+def make_xy_agg_mapping(config, df, prefix, overwrite=True):
+    out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"] / config["/fe/dataset"]
+    out_dir.mkdir(parents=True, exist_ok=True)
+    filepath = out_dir / f"{prefix}xy_agg_mapping.pkl"
+    if filepath.is_dir() and (not overwrite):
+        return joblib.load(filepath)
+
+    agg_df = df.query("x != 999").groupby("uid")[["x", "y"]].agg(["mean", "median", "std"])
+    logger.debug(f"agg_mapping : {df.shape}, {agg_df.shape}")
+
+    agg_df.columns = [f"{c[0]}_{c[1]}" for c in agg_df.columns]
+    agg_df = agg_df.reset_index()
+    joblib.dump(agg_df, filepath)
+    return agg_df
+
+
+def transform_regression_target(config: Config, df: pd.DataFrame, prefix: str) -> pd.DataFrame:
+    target_mask = np.array(df["original_x"] != 999, dtype=bool)
+    if config["/fe/regression_target_transform"] == "log":
+        df.loc[target_mask, ["x", "y"]] = np.log(df.loc[target_mask, ["original_x", "original_y"]].to_numpy())
+        return df
+
+    elif config["/fe/regression_target_transform"] == "mean_diff":
+        mapping_df = make_xy_agg_mapping(config=config, df=df, prefix=prefix)
+        df = pd.merge(df, mapping_df[["uid", "x_mean", "y_mean"]], on="uid", how="left")
+        df.loc[target_mask, "x"] = df.loc[target_mask, "x"] - df.loc[target_mask, "x_mean"]
+        df.loc[target_mask, "y"] = df.loc[target_mask, "y"] - df.loc[target_mask, "y_mean"]
+
+        logger.debug(df[["x", "x_mean", "original_x"]].head())
+        logger.debug(df[["y", "y_mean", "original_y"]].head())
+        return df
+
+    elif config["/fe/regression_target_transform"] == "z_score":
+        mapping_df = make_xy_agg_mapping(config=config, df=df, prefix=prefix)
+        df = pd.merge(df, mapping_df[["uid", "x_mean", "y_mean", "x_std", "y_std"]], on="uid", how="left")
+        df.loc[target_mask, "x"] = (df.loc[target_mask, "x"] - df.loc[target_mask, "x_mean"]) / df.loc[
+            target_mask, "x_std"
+        ]
+        df.loc[target_mask, "y"] = (df.loc[target_mask, "y"] - df.loc[target_mask, "y_mean"]) / df.loc[
+            target_mask, "y_std"
+        ]
+
+        logger.debug(df[["x", "x_mean", "original_x"]].head())
+        logger.debug(df[["y", "y_mean", "original_y"]].head())
+        return df
+
+    else:
+        raise NotImplementedError()
+
+
 def run() -> None:
     # set config
     pre_eval_config = load_yaml()
@@ -306,18 +346,18 @@ def run() -> None:
     raw_train_df = add_fold_index(config=config, df=raw_train_df)
 
     # target enginineering
-    train_feature_df = transform_regression_target(config=config, df=raw_train_df)
-    test_feature_df = transform_regression_target(config=config, df=raw_test_df)
+    train_feature_df = transform_regression_target(config=config, df=raw_train_df, prefix="train_")
+    test_feature_df = transform_regression_target(config=config, df=raw_test_df, prefix="test_")
 
     # feature engineering
     train_feature_df = make_features(
         config=config,
-        df=raw_train_df,
+        df=train_feature_df,
         overwrite=True,
     )
     test_feature_df = make_features(
         config=config,
-        df=raw_test_df,
+        df=test_feature_df,
         overwrite=True,
     )
 
@@ -339,6 +379,7 @@ def run() -> None:
     assert len(train_feature_df.query("x == 999")) == 0
     assert test_feature_df.query("x == 999")["uid"].nunique() == test_feature_df["uid"].nunique()
     logger.debug(f"\nfeatures\n\n{train_feature_df}")
+    logger.debug(f"\nxy\n\n{train_feature_df[['x', 'original_x', 'y', 'original_y']]}")
 
 
 if __name__ == "__main__":
