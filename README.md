@@ -14,7 +14,7 @@
 - Movement Uids Ober Time
 
     ```
-    poetry run python -m src.dash.human_movement.py
+    poetry run python -m src.dash.human_movement
     ```
 
 -  Run

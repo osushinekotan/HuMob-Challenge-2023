@@ -1,13 +1,13 @@
 # ライブラリをインポート
 from pathlib import Path
+from typing import Callable
 
 import dash
 import numpy as np
+import pandas as pd
 import plotly.express as px
 from dash import dcc, html
 from dash.dependencies import Input, Output
-
-from src.util import read_parquet_from_csv
 
 HOME = Path("/workspace")
 RESOURCES = HOME / "resources"
@@ -22,6 +22,28 @@ datasets_cache = {}
 
 # Dashアプリケーションを作成
 app = dash.Dash(__name__)
+
+
+def read_parquet_from_csv(
+    filepath: Path,
+    dirpath: Path,
+    process_fns: list[Callable] | None = None,
+    overwrite: bool = False,
+) -> pd.DataFrame:
+    name = filepath.name.split(".")[0]
+    parquet_filepath = dirpath / f"{name}.parquet"
+    if parquet_filepath.is_file() and (not overwrite):
+        return pd.read_parquet(parquet_filepath)
+
+    df = pd.read_csv(filepath)
+
+    if process_fns is not None:
+        for fn in process_fns:
+            df = fn(df)
+
+    df = df.reset_index(drop=True)
+    df.to_parquet(parquet_filepath)
+    return df
 
 
 def load_and_process_data():
@@ -60,18 +82,24 @@ app.layout = html.Div(
         ),
         dcc.Slider(
             id="time-slider",
-            min=0,  # スライダーの最小値を0に設定
-            max=len(df["time"].unique()) - 1,  # スライダーの最大値をtimeのユニークな値の数に設定
-            value=0,  # 初期値を0に設定
+            min=0,
+            max=len(df["time"].unique()) - 1,
+            value=0,
             marks={i: "" for i in range(len(df["time"].unique()))},
-            step=1,  # ステップを1に設定
+            step=1,
         ),
+        # 散布図用のGraph
         dcc.Graph(id="movement-graph"),
+        # 折れ線グラフ用のGraph
+        dcc.Graph(id="line-graph"),
     ]
 )
 
 
-@app.callback(Output("movement-graph", "figure"), [Input("uid-dropdown", "value"), Input("time-slider", "value")])
+@app.callback(
+    [Output("movement-graph", "figure"), Output("line-graph", "figure")],
+    [Input("uid-dropdown", "value"), Input("time-slider", "value")],
+)
 def update_graph(selected_uids, slider_value):
     # スライダーの値から対応するtimeを取得
     selected_time = df["time"].unique()[slider_value]
@@ -126,7 +154,19 @@ def update_graph(selected_uids, slider_value):
         gridwidth=1,
     )
 
-    return fig
+    # 新しく追加する折れ線グラフの作成
+    line_fig = px.line(
+        dff,
+        x="time",
+        y=["x", "y"],
+        color="uid",
+        labels={"x": "Time", "value": "Position Value", "variable": "Axis"},
+        title="Movement over Time",
+    )
+    line_fig.update_traces(mode="lines+markers")
+    line_fig.update_layout(xaxis_type="category")
+
+    return fig, line_fig
 
 
 # サーバを起動
