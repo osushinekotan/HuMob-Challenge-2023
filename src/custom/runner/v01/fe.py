@@ -136,16 +136,6 @@ def add_original_raw_targets(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def transform_regression_target(config: Config, df: pd.DataFrame) -> pd.DataFrame:
-    target_mask = np.array(df["original_x"] != 999, dtype=bool)
-    if config["/fe/regression_target_transform"] == "log":
-        df.loc[target_mask, ["x", "y"]] = np.log(df.loc[target_mask, ["original_x", "original_y"]].to_numpy())
-        return df
-
-    else:
-        raise NotImplementedError()
-
-
 def make_features(
     config: Config,
     df: pd.DataFrame,
@@ -261,6 +251,36 @@ def assign_d_cycle_number(config, df):
     return df
 
 
+def make_xy_agg_mapping(config, df, prefix):
+    out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"] / config["/fe/dataset"]
+    filepath = out_dir / f"{prefix}xy_agg_mapping.pkl"
+    if filepath.is_dir():
+        return joblib.load(filepath)
+
+    agg_df = df.groupby("uid")[["x", "y"]].agg(["mean", "median"])
+    agg_df.columns = [f"{c[0]}_{c[1]}" for c in agg_df.columns]
+    agg_df = agg_df.reset_index()
+    joblib.dump(agg_df, filepath)
+    return agg_df
+
+
+def transform_regression_target(config: Config, df: pd.DataFrame, prefix: str) -> pd.DataFrame:
+    target_mask = np.array(df["original_x"] != 999, dtype=bool)
+    if config["/fe/regression_target_transform"] == "log":
+        df.loc[target_mask, ["x", "y"]] = np.log(df.loc[target_mask, ["original_x", "original_y"]].to_numpy())
+        return df
+
+    elif config["/fe/regression_target_transform"] == "mean_diff":
+        mapping_df = make_xy_agg_mapping(config=config, df=df, prefix=prefix)
+        df = pd.merge(df, mapping_df[["uid", "x_mean", "y_mean"]], on="uid", how="left")
+        df["x"] = df["x"] - df["x_mean"]
+        df["x"] = df["y"] - df["y_mean"]
+        return df
+
+    else:
+        raise NotImplementedError()
+
+
 def run() -> None:
     # set config
     pre_eval_config = load_yaml()
@@ -306,8 +326,8 @@ def run() -> None:
     raw_train_df = add_fold_index(config=config, df=raw_train_df)
 
     # target enginineering
-    train_feature_df = transform_regression_target(config=config, df=raw_train_df)
-    test_feature_df = transform_regression_target(config=config, df=raw_test_df)
+    train_feature_df = transform_regression_target(config=config, df=raw_train_df, prefix="train_")
+    test_feature_df = transform_regression_target(config=config, df=raw_test_df, prefix="test_")
 
     # feature engineering
     train_feature_df = make_features(

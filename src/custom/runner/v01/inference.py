@@ -8,6 +8,7 @@ import pandas as pd
 import torch
 from custom.config_types import CONFIG_TYPES
 from custom.helper import inference_fn
+from custom.runner.v01.train import retransform_regression_target
 from logger import Logger
 from pytorch_pfn_extras.config import Config
 from util import load_yaml, seed_everything
@@ -129,6 +130,10 @@ def inference_fold(pre_eval_config: dict, df: pd.DataFrame, out_dir: Path) -> No
             )
         outputs.append(i_outputs)
     mean_outputs = np.mean(outputs, axis=0)
+
+    mean_outputs = retransform_regression_target(
+        config=Config(pre_eval_config), outputs=mean_outputs, data=df.query("d >= 60")
+    )
     return mean_outputs
 
 
