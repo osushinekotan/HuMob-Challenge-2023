@@ -326,6 +326,13 @@ def make_node_features(mesh_map_df, poi_df):
     return node_feature
 
 
+def load_features(config, name):
+    # set dir
+    out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"] / config["/fe/dataset"]
+    filepath_for_features_df = out_dir / f"{name}.pkl"
+    return joblib.load(filepath_for_features_df)
+
+
 def run() -> None:
     # set config
     pre_eval_config = load_yaml()
@@ -384,32 +391,37 @@ def run() -> None:
     # add fold index
     raw_train_df = add_fold_index(config=config, df=raw_train_df)
 
-    # target enginineering
-    train_feature_df = transform_regression_target(config=config, df=raw_train_df)
-    test_feature_df = transform_regression_target(config=config, df=raw_test_df)
+    if config["/fe/overwrite"]:
+        # target enginineering
+        train_feature_df = transform_regression_target(config=config, df=raw_train_df)
+        test_feature_df = transform_regression_target(config=config, df=raw_test_df)
 
-    # feature engineering
-    train_feature_df = make_features(
-        config=config,
-        df=raw_train_df,
-        overwrite=True,
-    )
-    test_feature_df = make_features(
-        config=config,
-        df=raw_test_df,
-        overwrite=True,
-    )
+        # feature engineering
+        train_feature_df = make_features(
+            config=config,
+            df=raw_train_df,
+            overwrite=True,
+        )
+        test_feature_df = make_features(
+            config=config,
+            df=raw_test_df,
+            overwrite=True,
+        )
 
-    # scaling
-    train_feature_df, test_feature_df = scaling(
-        config=config,
-        train_feature_df=train_feature_df,
-        test_feature_df=test_feature_df,
-    )
+        # scaling
+        train_feature_df, test_feature_df = scaling(
+            config=config,
+            train_feature_df=train_feature_df,
+            test_feature_df=test_feature_df,
+        )
 
-    # save features
-    save_features(config=config, features_df=train_feature_df, name="train_feature_df")
-    save_features(config=config, features_df=test_feature_df, name="test_feature_df")
+        # save features
+        save_features(config=config, features_df=train_feature_df, name="train_feature_df")
+        save_features(config=config, features_df=test_feature_df, name="test_feature_df")
+
+    else:
+        train_feature_df = load_features(config=config, name="train_feature_df")
+        test_feature_df = load_features(config=config, name="test_feature_df")
 
     # check
     logger.debug(f"train_feature_df : {train_feature_df.shape}, test_feature_df : {test_feature_df.shape}")
