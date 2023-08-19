@@ -12,7 +12,7 @@ logger = Logger(name="metrics")
 
 
 class MSEMetric:
-    def __init__(self, squared=True, higher_is_better=True):
+    def __init__(self, squared=False, higher_is_better=True):
         self.squared = squared
         self.higher_is_better = higher_is_better
         self.score_naem = "rmse_score" if self.squared else "mse_score"
