@@ -247,6 +247,11 @@ def add_poi_features(config, df, poi_df, batch_size=100000):
     node_colmns = [x for x in merged_df.columns if x.startswith("f_")]
     node_df = merged_df[node_colmns].copy()
     node_df.columns = [f"fn{x[1:]}" for x in node_df.columns]  # central node feature prefix : fn_
+
+    # reduce mem
+    merged_df = reduce_mem_usage(merged_df)
+    node_df = reduce_mem_usage(node_df)
+
     return pd.concat([merged_df, node_df], axis=1)
 
 
@@ -378,10 +383,6 @@ def run() -> None:
 
     # add fold index
     raw_train_df = add_fold_index(config=config, df=raw_train_df)
-
-    # reduce mem usage
-    raw_train_df = reduce_mem_usage(raw_train_df, verbose=True)
-    raw_test_df = reduce_mem_usage(raw_test_df, verbose=True)
 
     # target enginineering
     train_feature_df = transform_regression_target(config=config, df=raw_train_df)
