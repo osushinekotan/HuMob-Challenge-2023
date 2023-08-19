@@ -187,6 +187,7 @@ def save_features(config, features_df, name):
     # set dir
     out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"] / config["/fe/dataset"]
     filepath_for_features_df = out_dir / f"{name}.pkl"
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     joblib.dump(features_df, filepath_for_features_df)
     logger.info(f"complete save_features! ({filepath_for_features_df})")
