@@ -1,12 +1,12 @@
 global:
   project: "HuMob-Challenge-2023"
   seed: 8823
-  debug: True
+  debug: False
   resources: "/workspace/resources"
   padding_value: -999
 
 fe:
-  out_dir: "001/features"
+  out_dir: "002/features"
   overwrite: False
   dataset: "task2_dataset"
   use_poi_features: True
@@ -68,7 +68,7 @@ cv:
     random_state: "@/global/seed"
 
 nn:
-  out_dir: "001/models"
+  out_dir: "002/models"
   device: ???
   padding_value: "@/global/padding_value"
   max_epochs: 4
@@ -87,11 +87,11 @@ nn:
   model:
     type: DynamicGraphLSTMV1
     in_features_sage: ??? # node feature
-    hidden_features_sage: 2
-    embed_features_sage: 4
+    hidden_features_sage: 1024
+    embed_features_sage: 512
     input_size1_lstm: ???
     input_size2_lstm: ???
-    hidden_size_lstm: 4
+    hidden_size_lstm: 1024
     output_size: ???
 
   criterion:
@@ -131,7 +131,7 @@ nn:
         is_train_mode: True
         padding_value: "@/nn/padding_value"
         return_padding_mask: False
-      batch_size: 1
+      batch_size: 8
       num_workers: 1
       shuffle: False
       pin_memory: True
@@ -144,7 +144,7 @@ nn:
         is_train_mode: True
         padding_value: "@/nn/padding_value"
         return_padding_mask: False
-      batch_size: 1
+      batch_size: 32
       num_workers: 1
       shuffle: False
       pin_memory: True
@@ -157,7 +157,7 @@ nn:
         is_train_mode: False
         padding_value: "@/nn/padding_value"
         return_padding_mask: False
-      batch_size: 1
+      batch_size: 32
       num_workers: 1
       shuffle: False
       pin_memory: True

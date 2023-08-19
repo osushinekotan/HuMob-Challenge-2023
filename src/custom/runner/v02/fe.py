@@ -177,7 +177,7 @@ def make_features(
     @cache(out_dir=out_dir, overwrite=overwrite, no_cache=no_cache)
     def _extract(df, extractor):
         with logger.time_log(target=extractor.__class__.__name__):
-            return extractor(df).astype(np.float32)
+            return reduce_mem_usage(extractor(df))
 
     return pd.concat([df] + [_extract(df, extractor) for extractor in extractors], axis=1)
 
