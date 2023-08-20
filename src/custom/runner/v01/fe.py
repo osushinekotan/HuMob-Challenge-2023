@@ -256,6 +256,14 @@ def assign_day_of_week(df):
     return df
 
 
+def assign_t_labe(df):
+    morning = {k: 0 for k in list(range(12, 36))}
+    midnight = {k: 1 for k in list(range(36, 48)) + list(range(0, 12))}
+    t_label_mapping = {**morning, **midnight}
+    df["t_label"] = df["t"].map(t_label_mapping)
+    return df
+
+
 def make_xy_agg_mapping(config, df, prefix, overwrite=True):
     out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"] / config["/fe/dataset"]
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -355,6 +363,10 @@ def run() -> None:
     # assign day of week
     raw_train_df = assign_day_of_week(raw_train_df)
     raw_test_df = assign_day_of_week(raw_test_df)
+
+    # assign t_label (morning and midnight)
+    raw_train_df = assign_t_labe(raw_train_df)
+    raw_test_df = assign_t_labe(raw_test_df)
 
     # copy original target
     raw_train_df = add_original_raw_targets(raw_train_df)

@@ -59,7 +59,13 @@ def get_auxiliary_names(auxiliary_names, columns):
             for x in columns
             if x.startswith("f_x_grpby_uid_dayofweek_agg") or x.startswith("f_y_grpby_uid_dayofweek_agg")
         ]
-        xy_agg_columns = cols1 + cols2
+        cols3 = [
+            x
+            for x in columns
+            if x.startswith("f_x_grpby_uid_dayofweek_t_label_agg")
+            or x.startswith("f_y_grpby_uid_dayofweek_t_label_agg")
+        ]
+        xy_agg_columns = cols1 + cols2 + cols3
         return f_dt_columns + xy_agg_columns
 
     return auxiliary_names
