@@ -51,48 +51,6 @@ fe:
         group_values: ["x", "y"],
         agg_methods: ["min", "max", "mean", "median"],
       }
-    - {
-        type: TimeGroupedSimpleFeatureExtoractor,
-        group_key: ["uid", "d"],
-        group_values: ["x", "y"],
-        agg_methods: ["min", "max", "mean", "median"],
-        time_range: { "t": [16, 36] }, # 8~18
-      }
-    - {
-        type: TimeGroupedSimpleFeatureExtoractor,
-        group_key: ["uid", "cycle_07"],
-        group_values: ["x", "y"],
-        agg_methods: ["min", "max", "mean", "median"],
-        time_range: { "t": [16, 36] }, # 8~18
-      }
-    - {
-        type: TimeGroupedSimpleFeatureExtoractor,
-        group_key: ["uid", "cycle_14"],
-        group_values: ["x", "y"],
-        agg_methods: ["min", "max", "mean", "median"],
-        time_range: { "t": [16, 36] }, # 8~18
-      }
-    - {
-        type: TimeGroupedSimpleFeatureExtoractor,
-        group_key: ["uid", "d"],
-        group_values: ["x", "y"],
-        agg_methods: ["min", "max", "mean", "median"],
-        time_range: { "t": [38, 48] }, # 19~24
-      }
-    - {
-        type: TimeGroupedSimpleFeatureExtoractor,
-        group_key: ["uid", "cycle_07"],
-        group_values: ["x", "y"],
-        agg_methods: ["min", "max", "mean", "median"],
-        time_range: { "t": [38, 48] }, # 19~24
-      }
-    - {
-        type: TimeGroupedSimpleFeatureExtoractor,
-        group_key: ["uid", "cycle_14"],
-        group_values: ["x", "y"],
-        agg_methods: ["min", "max", "mean", "median"],
-        time_range: { "t": [38, 48] }, # 19~24
-      }
     - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] } # + poi features
 
   regression_target_transform: z_score
