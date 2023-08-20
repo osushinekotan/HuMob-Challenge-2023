@@ -7,7 +7,7 @@ from custom.feature.feature_extractor import (
     TimeGroupedSimpleFeatureExtoractor,
 )
 from custom.helper import PadSequenceCollateFn
-from custom.metrics import GeobleuMetric, MSEMetric, SeqMSELoss
+from custom.metrics import GeobleuMetric, MSEMetric, RMSEGeobleuMetric, SeqMSELoss
 from custom.model import CustomLSTMModelV1, CustomTransformerModelV1
 from sklearn.decomposition import NMF, PCA
 from sklearn.model_selection import StratifiedGroupKFold
@@ -52,4 +52,5 @@ CONFIG_TYPES = dict(
     SeqMSELoss=SeqMSELoss,
     MSEMetric=MSEMetric,
     GeobleuMetric=GeobleuMetric,
+    RMSEGeobleuMetric=RMSEGeobleuMetric,
 )

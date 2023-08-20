@@ -94,7 +94,10 @@ nn:
     type: SeqMSELoss
 
   metrics:
-    type: MSEMetric
+    type: RMSEGeobleuMetric
+    processes: 3
+    sample_size: 1000
+    seed: "@/global/seed"
 
   dataset:
     train:

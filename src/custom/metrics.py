@@ -11,20 +11,31 @@ import geobleu
 logger = Logger(name="metrics")
 
 
+class RMSEGeobleuMetric:
+    def __init__(self, processes=3, sample_size=None, seed=0) -> None:
+        self.rmse_metric = MSEMetric()
+        self.geobleu_metric = GeobleuMetric(processes=processes, sample_size=sample_size, seed=seed)
+
+    def __call__(self, output, target, info) -> Any:
+        logger.debug(f"output : {output[:10]}")
+        logger.debug(f"target : {target[:10]}")
+        rmse_score: float = self.rmse_metric(output=output, target=target)
+        geo_score: dict[str, float] = self.geobleu_metric(output=output, target=target, info=info)
+        geo_score["rmse_score"] = rmse_score["mse_score"]
+        return geo_score
+
+
 class MSEMetric:
     def __init__(self, squared=False, higher_is_better=True):
         self.squared = squared
         self.higher_is_better = higher_is_better
-        self.score_naem = "rmse_score" if self.squared else "mse_score"
 
     def __call__(self, output, target, **kwargs):
-        logger.debug(f"output : {output[:10]}")
-        logger.debug(f"target : {target[:10]}")
         assert 999 not in target, ValueError()
 
         score = mean_squared_error(target, output, squared=self.squared)
         score = -score if self.higher_is_better else score
-        return {self.score_naem: score}
+        return {"mse_score": score}
 
 
 class GeobleuMetric:
@@ -36,9 +47,6 @@ class GeobleuMetric:
         self.seed = seed
 
     def __call__(self, output, target, **kwargs) -> Any:
-        logger.debug(f"output : {output[:10]}")
-        logger.debug(f"target : {target[:10]}")
-
         generated = np.concatenate([kwargs["info"], output], axis=1)
         reference = np.concatenate([kwargs["info"], target], axis=1)
 

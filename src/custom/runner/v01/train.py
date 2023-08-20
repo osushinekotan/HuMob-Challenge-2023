@@ -159,9 +159,9 @@ def judge_best_or_not(best_score: dict | float, eval_score: dict) -> bool:
         return True
 
     for k in eval_score.keys():
-        if best_score[k] > eval_score[k]:
-            return False
-    return True
+        if best_score[k] < eval_score[k]:
+            return True  # ひとつで評価指標でよくなればOK
+    return False
 
 
 def get_wandb_run_name(config: Config) -> str:
@@ -253,7 +253,7 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
                     config=config, outputs=va_output["outputs"], data=valid_data.query("d >= 60")
                 ),
                 target=valid_data.query("d >= 60")[["original_x", "original_y"]].to_numpy(),
-                # info=valid_data[["d", "t"]].query("d >= 60").to_numpy(),
+                info=valid_data[["d", "t"]].query("d >= 60").to_numpy(),
             )
 
         # logs
