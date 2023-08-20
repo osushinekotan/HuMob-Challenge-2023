@@ -258,7 +258,7 @@ def make_xy_agg_mapping(config, df, prefix, overwrite=True):
     if filepath.is_dir() and (not overwrite):
         return joblib.load(filepath)
 
-    agg_df = df.query("x != 999").groupby("uid")[["x", "y"]].agg(["mean", "median", "std"])
+    agg_df = df[df["x"].notnull()].groupby("uid")[["x", "y"]].agg(["mean", "median", "std"])
     logger.debug(f"agg_mapping : {df.shape}, {agg_df.shape}")
 
     agg_df.columns = [f"{c[0]}_{c[1]}" for c in agg_df.columns]
@@ -301,6 +301,12 @@ def transform_regression_target(config: Config, df: pd.DataFrame, prefix: str) -
         raise NotImplementedError()
 
 
+def transform_xy_999_to_nan(df):
+    df.loc[df["x"] == 999, "x"] = np.nan
+    df.loc[df["y"] == 999, "y"] = np.nan
+    return df
+
+
 def run() -> None:
     # set config
     pre_eval_config = load_yaml()
@@ -333,6 +339,9 @@ def run() -> None:
         with logger.time_log("make poi features"):
             raw_train_df = add_poi_features(config=config, df=raw_train_df, poi_df=poi_df)
             raw_test_df = add_poi_features(config=config, df=raw_test_df, poi_df=poi_df)
+
+    # 999 -> nan
+    raw_test_df = transform_xy_999_to_nan(raw_test_df)
 
     # assign cycle number
     raw_train_df = assign_d_cycle_number(config, df=raw_train_df)
@@ -376,8 +385,10 @@ def run() -> None:
     logger.debug(f"train_feature_df : {train_feature_df.shape}, test_feature_df : {test_feature_df.shape}")
     logger.debug(f"train_uids : {train_feature_df['uid'].nunique()}, test_uids : {test_feature_df['uid'].nunique()}")
 
-    assert len(train_feature_df.query("x == 999")) == 0
-    assert test_feature_df.query("x == 999")["uid"].nunique() == test_feature_df["uid"].nunique()
+    logger.debug(test_feature_df[["x", "y"]])
+
+    assert sum(train_feature_df["x"].isnull()) == 0
+    assert test_feature_df.loc[test_feature_df["d"] >= 60, "uid"].nunique() == test_feature_df["uid"].nunique()
     logger.debug(f"\nfeatures\n\n{train_feature_df}")
     logger.debug(f"\nxy\n\n{train_feature_df[['x', 'original_x', 'y', 'original_y']]}")
 

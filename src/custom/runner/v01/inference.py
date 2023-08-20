@@ -8,7 +8,7 @@ import pandas as pd
 import torch
 from custom.config_types import CONFIG_TYPES
 from custom.helper import inference_fn
-from custom.runner.v01.train import retransform_regression_target
+from custom.runner.v01.train import get_auxiliary_names, retransform_regression_target
 from logger import Logger
 from pytorch_pfn_extras.config import Config
 from util import load_yaml, seed_everything
@@ -62,11 +62,8 @@ def set_config(pre_eval_config: dict, test_feature_df: pd.DataFrame) -> Config:
         feature_names if feature_names != "???" else [x for x in test_feature_df.columns if x.startswith("f_")]
     )
     auxiliary_names = pre_eval_config["nn"]["feature"]["auxiliary_names"]
-    auxiliary_names = (
-        auxiliary_names
-        if auxiliary_names != "???"
-        else [x for x in test_feature_df.columns if x.startswith("f_d") or x.startswith("f_t")]
-    )
+    auxiliary_names = get_auxiliary_names(auxiliary_names, columns=test_feature_df.columns)
+
     logger.info(f"feature_names : {feature_names}")
     logger.info(f"auxiliary_names : {auxiliary_names}")
 

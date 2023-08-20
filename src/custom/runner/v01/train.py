@@ -50,6 +50,26 @@ def calc_steps(
     return training_steps, iters_per_epoch
 
 
+def get_auxiliary_names(auxiliary_names, columns):
+    if auxiliary_names == "???":
+        f_dt_columns = [x for x in columns if x.startswith("f_d") or x.startswith("f_t")]
+        xy_agg_columns = [
+            "f_x_grpby_uid_agg_mean",  # TODO : leakey -> to fix
+            "f_x_grpby_uid_agg_median",
+            "f_x_grpby_uid_agg_max",
+            "f_x_grpby_uid_agg_min",
+            "f_x_grpby_uid_agg_std",
+            "f_y_grpby_uid_agg_mean",
+            "f_y_grpby_uid_agg_median",
+            "f_y_grpby_uid_agg_max",
+            "f_y_grpby_uid_agg_min",
+            "f_y_grpby_uid_agg_std",
+        ]
+        return f_dt_columns + xy_agg_columns
+
+    return auxiliary_names
+
+
 def set_model_config(pre_eval_config: dict, feature_names, auxiliary_names):
     # model
     if pre_eval_config["nn"]["model"]["type"].startswith("CustomLSTMModel"):
@@ -88,11 +108,8 @@ def set_config(pre_eval_config: dict, train_feature_df: pd.DataFrame, valid_feat
         feature_names if feature_names != "???" else [x for x in train_feature_df.columns if x.startswith("f_")]
     )
     auxiliary_names = pre_eval_config["nn"]["feature"]["auxiliary_names"]
-    auxiliary_names = (
-        auxiliary_names
-        if auxiliary_names != "???"
-        else [x for x in train_feature_df.columns if x.startswith("f_d") or x.startswith("f_t")]
-    )
+    auxiliary_names = get_auxiliary_names(auxiliary_names, columns=train_feature_df.columns)
+
     logger.info(f"feature_names : {feature_names}")
     logger.info(f"auxiliary_names : {auxiliary_names}")
 

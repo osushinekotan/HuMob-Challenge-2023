@@ -31,7 +31,7 @@ class MSEMetric:
         self.higher_is_better = higher_is_better
 
     def __call__(self, output, target, **kwargs):
-        assert 999 not in target, ValueError()
+        assert np.nan not in target, ValueError()
 
         score = mean_squared_error(target, output, squared=self.squared)
         score = -score if self.higher_is_better else score
