@@ -53,18 +53,13 @@ def calc_steps(
 def get_auxiliary_names(auxiliary_names, columns):
     if auxiliary_names == "???":
         f_dt_columns = [x for x in columns if x.startswith("f_d") or x.startswith("f_t")]
-        xy_agg_columns = [
-            "f_x_grpby_uid_agg_mean",  # TODO : leakey -> to fix
-            "f_x_grpby_uid_agg_median",
-            "f_x_grpby_uid_agg_max",
-            "f_x_grpby_uid_agg_min",
-            "f_x_grpby_uid_agg_std",
-            "f_y_grpby_uid_agg_mean",
-            "f_y_grpby_uid_agg_median",
-            "f_y_grpby_uid_agg_max",
-            "f_y_grpby_uid_agg_min",
-            "f_y_grpby_uid_agg_std",
+        cols1 = [x for x in columns if x.startswith("f_x_grpby_uid_agg") or x.startswith("f_y_grpby_uid_agg")]
+        cols2 = [
+            x
+            for x in columns
+            if x.startswith("f_x_grpby_uid_dayofweek_agg") or x.startswith("f_y_grpby_uid_dayofweek_agg")
         ]
+        xy_agg_columns = cols1 + cols2
         return f_dt_columns + xy_agg_columns
 
     return auxiliary_names

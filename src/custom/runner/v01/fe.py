@@ -251,6 +251,11 @@ def assign_d_cycle_number(config, df):
     return df
 
 
+def assign_day_of_week(df):
+    df["dayofweek"] = (df["d"] % 7).astype(int)
+    return df
+
+
 def make_xy_agg_mapping(config, df, prefix, overwrite=True):
     out_dir = Path(config["/global/resources"]) / "output" / config["fe/out_dir"] / config["/fe/dataset"]
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -346,6 +351,10 @@ def run() -> None:
     # assign cycle number
     raw_train_df = assign_d_cycle_number(config, df=raw_train_df)
     raw_test_df = assign_d_cycle_number(config, df=raw_test_df)
+
+    # assign day of week
+    raw_train_df = assign_day_of_week(raw_train_df)
+    raw_test_df = assign_day_of_week(raw_test_df)
 
     # copy original target
     raw_train_df = add_original_raw_targets(raw_train_df)

@@ -13,18 +13,24 @@ fe:
     type: NMF
     n_components: 10
     random_state: "@/global/seed"
-  cycles: [7, 14]
+  cycles: [7]
   extractors:
     - {
         type: GroupedDiffFeatureExtractor,
         group_key: uid,
-        group_values: ["d", "x", "y", "cycle_07", "cycle_14"],
+        group_values: ["d", "x", "y", "cycle_07"],
         intervals: [1, -1, 2, -2],
       }
     - {
         type: GroupedDiffFeatureExtractor,
         group_key: ["uid", "d"],
         group_values: ["t"],
+        intervals: [1, -1, 2, -2],
+      }
+    - {
+        type: GroupedDiffFeatureExtractor,
+        group_key: ["uid", "dayofweek"],
+        group_values: ["x", "y"],
         intervals: [1, -1, 2, -2],
       }
     - {
@@ -40,6 +46,12 @@ fe:
         intervals: [1, -1, 2, -2],
       }
     - {
+        type: GroupedShiftFeatureExtractor,
+        group_key: ["uid", "dayofweek"],
+        group_values: ["x", "y"],
+        intervals: [1, -1, 2, -2],
+      }
+    - {
         type: GroupedSimpleFeatureExtoractor,
         group_key: ["uid"],
         group_values: ["x", "y"],
@@ -48,6 +60,12 @@ fe:
     - {
         type: GroupedSimpleFeatureExtoractor,
         group_key: ["uid", "d"],
+        group_values: ["x", "y"],
+        agg_methods: ["min", "max", "mean", "median", "std"],
+      }
+    - {
+        type: GroupedSimpleFeatureExtoractor,
+        group_key: ["uid", "dayofweek"],
         group_values: ["x", "y"],
         agg_methods: ["min", "max", "mean", "median", "std"],
       }
@@ -80,7 +98,7 @@ nn:
 
   feature:
     feature_names: ???
-    auxiliary_names: ??? # f_d_*, f_t_*, f_x_grpby_uid_*, f_y_grpby_uid_*
+    auxiliary_names: ??? # f_d_*, f_t_*, f_x_grpby_uid_*, f_y_grpby_uid_*, f_x_grpby_uid_dayofweek_*, f_y_grpby_uid_dayofweek_*
     target_names: ["x", "y"]
 
   model:
