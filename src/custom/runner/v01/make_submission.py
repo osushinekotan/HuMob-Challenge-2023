@@ -23,6 +23,9 @@ def run():
         .query("d>=60")
         .reset_index(drop=True)
     )
+
+    logger.debug(f"test_predictions : {test_predictions.shape}")
+    logger.debug(f"test_df : {test_df.shape}")
     submission_df = pd.concat([test_df[["uid", "d", "t"]], pd.DataFrame(test_predictions, columns=["x", "y"])], axis=1)
     assert submission_df.isnull().sum().sum() == 0
 

@@ -179,7 +179,7 @@ def retransform_regression_target(config: Config, outputs: np.ndarray, data=None
 
     elif config["/fe/regression_target_transform"] == "mean_diff":
         assert len(data) == len(outputs)
-        outputs = outputs + data[["x_mean", "y_mean"]]
+        outputs = outputs + data[["x_mean", "y_mean"]].values
         outputs[outputs < 1] = 1
         outputs[outputs > 200] = 200
         return outputs
