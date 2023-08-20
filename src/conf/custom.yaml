@@ -95,7 +95,7 @@ fe:
       }
     - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] } # + poi features
 
-  regression_target_transform: mean_diff
+  regression_target_transform: z_score
   scaling:
     type: StandardScaler
 
