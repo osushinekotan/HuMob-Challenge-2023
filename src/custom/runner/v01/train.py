@@ -53,17 +53,14 @@ def calc_steps(
 def get_auxiliary_names(auxiliary_names, columns):
     if auxiliary_names == "???":
         f_dt_columns = [x for x in columns if x.startswith("f_d") or x.startswith("f_t")]
-        cols1 = [x for x in columns if x.startswith("f_x_grpby_uid_agg") or x.startswith("f_y_grpby_uid_agg")]
+        cols1 = [x for x in columns if x.startswith("f_x_grpby_uid_") or x.startswith("f_y_grpby_uid_")]
         cols2 = [
-            x
-            for x in columns
-            if x.startswith("f_x_grpby_uid_dayofweek_agg") or x.startswith("f_y_grpby_uid_dayofweek_agg")
+            x for x in columns if x.startswith("f_x_grpby_uid_dayofweek_") or x.startswith("f_y_grpby_uid_dayofweek_")
         ]
         cols3 = [
             x
             for x in columns
-            if x.startswith("f_x_grpby_uid_dayofweek_t_label_agg")
-            or x.startswith("f_y_grpby_uid_dayofweek_t_label_agg")
+            if x.startswith("f_x_grpby_uid_dayofweek_t_label_") or x.startswith("f_y_grpby_uid_dayofweek_t_label_")
         ]
         xy_agg_columns = cols1 + cols2 + cols3
         return f_dt_columns + xy_agg_columns

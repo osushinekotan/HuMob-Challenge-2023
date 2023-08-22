@@ -1,4 +1,5 @@
 import hashlib
+import re
 from functools import cached_property, wraps
 from pathlib import Path
 from typing import Callable
@@ -253,6 +254,7 @@ def assign_d_cycle_number(config, df):
 
 def assign_day_of_week(df):
     df["dayofweek"] = (df["d"] % 7).astype(int)
+    df["weekend"] = df["dayofweek"].isin([6, 0])
     return df
 
 
@@ -317,6 +319,64 @@ def transform_regression_target(config: Config, df: pd.DataFrame, prefix: str) -
 def transform_xy_999_to_nan(df):
     df.loc[df["x"] == 999, "x"] = np.nan
     df.loc[df["y"] == 999, "y"] = np.nan
+    return df
+
+
+def get_agg_method(s):
+    # agg_の後に続く文字列を取得
+    pattern = re.compile(r"agg_([^_]+)")
+    match = pattern.search(s)
+    if match:
+        return match.group(1)
+    return None
+
+
+def fillna_grpby_uid(df):
+    for col in df.columns:
+        if "_grpby_uid_" not in col:
+            continue
+        agg_method = get_agg_method(col)
+
+        if agg_method is None:
+            continue
+
+        nan_indices = df[df[col].isna()].index
+        if len(nan_indices) == 0:
+            continue
+
+        logger.debug(f"fillna_grpby_uid : {col}")
+        for idx in tqdm(nan_indices):
+            uid = df.loc[idx, "uid"]
+            fill_value = df[df["uid"] == uid][col].agg(agg_method)
+            df.loc[idx, col] = fill_value
+    return df
+
+
+def post_make_features(df):
+    # 変数名をリストとして定義
+    keys = [
+        "uid",
+        "uid_dayofweek",
+        "uid_t_label",
+        "uid_weekend",
+        "uid_weekend_t_label",
+        "uid_dayofweek_t_label",
+    ]
+
+    # diff と z_score の計算
+    for base_key in keys:
+        for var in ["x", "y"]:
+            mean_col = f"f_{var}_grpby_{base_key}_agg_mean"
+            std_col = f"f_{var}_grpby_{base_key}_agg_std"
+
+            # diff の計算
+            diff_col = f"f_{var}_grpby_{base_key}_transform_mean_diff"
+            df[diff_col] = df[var] - df[mean_col]
+
+            # z_score の計算
+            z_score_col = f"f_{var}_grpby_{base_key}_transform_z_score"
+            df[z_score_col] = np.where(df[std_col] != 0, df[diff_col] / df[std_col], np.nan)
+
     return df
 
 
@@ -390,6 +450,20 @@ def run() -> None:
         df=test_feature_df,
         overwrite=True,
     )
+
+    logger.info(f"train isnull sum :\n {train_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
+    logger.info(f"test isnull sum :\n {test_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
+
+    # fillna simple aggregated features
+    train_feature_df = fillna_grpby_uid(df=train_feature_df)
+    test_feature_df = fillna_grpby_uid(df=test_feature_df)
+
+    logger.info(f"train isnull sum :\n {train_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
+    logger.info(f"test isnull sum :\n {test_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
+
+    # post feature engineering (transform feature)
+    train_feature_df = post_make_features(df=train_feature_df)
+    test_feature_df = post_make_features(df=test_feature_df)
 
     # scaling
     train_feature_df, test_feature_df = scaling(
