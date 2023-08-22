@@ -79,8 +79,11 @@ class GroupedSimpleFeatureExtoractor:
         else:
             self.group_key_name = group_key
 
+    def aggregate(self, df):
+        return df.groupby(self.group_key)[self.group_values].agg(self.agg_methods)
+
     def __call__(self, df):
-        agg_df = df.groupby(self.group_key)[self.group_values].agg(self.agg_methods)
+        agg_df = self.aggregate(df=df)
         agg_df.columns = [f"{x[0]}_grpby_{self.group_key_name}_agg_{x[1]}" for x in agg_df.columns]
         return (
             pd.merge(
@@ -93,6 +96,11 @@ class GroupedSimpleFeatureExtoractor:
             .drop(self.group_key, axis=1)
             .add_prefix("f_")
         )
+
+
+class D60MaskGroupedSimpleFeatureExtoractor(GroupedSimpleFeatureExtoractor):
+    def aggregate(self, df):
+        return df.query("d < 60").groupby(self.group_key)[self.group_values].agg(self.agg_methods)
 
 
 class TimeGroupedSimpleFeatureExtoractor:

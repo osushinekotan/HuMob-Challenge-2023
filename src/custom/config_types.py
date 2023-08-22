@@ -1,5 +1,6 @@
 from custom.dataset import TestDataset, TrainDataset
 from custom.feature.feature_extractor import (
+    D60MaskGroupedSimpleFeatureExtoractor,
     GroupedDiffFeatureExtractor,
     GroupedShiftFeatureExtractor,
     GroupedSimpleFeatureExtoractor,
@@ -29,6 +30,7 @@ CONFIG_TYPES = dict(
     RawFeatureExtractor=RawFeatureExtractor,
     GroupedSimpleFeatureExtoractor=GroupedSimpleFeatureExtoractor,
     TimeGroupedSimpleFeatureExtoractor=TimeGroupedSimpleFeatureExtoractor,
+    D60MaskGroupedSimpleFeatureExtoractor=D60MaskGroupedSimpleFeatureExtoractor,
     # decomposer
     NMF=NMF,
     PCA=PCA,
