@@ -27,6 +27,7 @@ geobleu = {path = "geobleu", develop = true}
 torch = ">=2.0.0, !=2.0.1"
 pytorch-pfn-extras = "^0.7.1"
 polars = "^0.18.13"
+seaborn = "^0.12.2"
 
 
 [tool.poetry.group.dev.dependencies]
