@@ -267,8 +267,8 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
                 output=retransform_regression_target(
                     config=config, outputs=va_output["outputs"], data=valid_data.query("d >= 60")
                 ),
-                target=valid_data.query("d >= 60")[["original_x", "original_y"]].to_numpy(),
-                info=valid_data[["d", "t"]].query("d >= 60").to_numpy(),
+                target=valid_data.query("d >= 60")[["original_x", "original_y"]].reset_index(drop=True),
+                info=valid_data[["uid", "d", "t"]].query("d >= 60").reset_index(drop=True),
             )
 
         # logs

@@ -1,10 +1,12 @@
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import torch
 from logger import Logger
 from sklearn.metrics import mean_squared_error
 from torch import nn
+from tqdm import tqdm
 
 import geobleu
 
@@ -43,34 +45,30 @@ class GeobleuMetric:
         # dtw_score : smaller is better
         # geobleu_score : larger is better
         self.processes = processes
-        self.sample_size = sample_size  # too heavy metrics...
+        self.sample_size = sample_size  # too heavy metrics... sample uid num
         self.seed = seed
 
     def __call__(self, output, target, **kwargs) -> Any:
-        generated = np.concatenate([kwargs["info"], output], axis=1)
-        reference = np.concatenate([kwargs["info"], target], axis=1)
+        generated = pd.concat([kwargs["info"], pd.DataFrame(output, columns=["x", "y"])], axis=1)
+        reference = pd.concat([kwargs["info"], target], axis=1)
 
-        if self.sample_size:
+        uids = generated["uid"].unique()
+
+        if self.sample_size and self.sample_size < len(uids):
             np.random.seed(self.seed)
-            n = len(generated)
-            selected_index_arr = np.random.choice(list(range(n)), self.sample_size, replace=False)
+            uids = np.random.choice(uids, self.sample_size, replace=False)
+            logger.debug(f"sampling size : {self.sample_size}, uids : {uids[:5]}")
 
-            logger.debug(f"sampling size : {self.sample_size}, head : {selected_index_arr[:5]}")
+        n = len(uids)
+        geobleu_score = 0
+        dtw_score = 0
+        for uid in tqdm(uids):
+            a_generated = generated.query(f"uid == {uid}")[["d", "t", "x", "y"]].values.tolist()
+            a_reference = reference.query(f"uid == {uid}")[["d", "t", "original_x", "original_y"]].values.tolist()
+            geobleu_score += geobleu.calc_geobleu(a_generated, a_reference, processes=self.processes)
+            dtw_score += geobleu.calc_dtw(a_generated, a_reference, processes=self.processes)
 
-            generated = generated[selected_index_arr]
-            reference = reference[selected_index_arr]
-
-        generated = generated.tolist()
-        reference = reference.tolist()
-
-        with logger.time_log("geobleu"):
-            geobleu_score = geobleu.calc_geobleu(generated, reference, processes=self.processes)
-            logger.info(f"score : {geobleu_score:.6f}")
-        with logger.time_log("dtw"):
-            dtw_score = geobleu.calc_dtw(generated, reference, processes=self.processes)
-            logger.info(f"score : {dtw_score:.6f}")
-
-        return {"geobleu_score": geobleu_score, "dtw_score": -dtw_score}
+        return {"geobleu_score": geobleu_score / n, "dtw_score": -dtw_score / n}
 
 
 class SeqMSELoss(nn.MSELoss):
