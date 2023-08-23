@@ -11,12 +11,16 @@
 
 ## Script
 
-- Movement Uids Ober Time
+- Movement Uids Over Time
 
     ```
     poetry run python -m src.dash.human_movement
     ```
+- XY Trend
 
+    ```
+    poetry run python -m src.dash.xy_trend
+    ```
 -  Run
 
     ```
