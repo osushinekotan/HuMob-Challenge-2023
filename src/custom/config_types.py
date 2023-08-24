@@ -9,7 +9,7 @@ from custom.feature.feature_extractor import (
 )
 from custom.helper import PadSequenceCollateFn
 from custom.metrics import GeobleuMetric, MSEMetric, RMSEGeobleuMetric, SeqMSELoss
-from custom.model import CustomLSTMModelV1, CustomTransformerModelV1
+from custom.model import CustomLSTMModelV1, CustomLSTMModelV1WithAttention, CustomTransformerModelV1
 from sklearn.decomposition import NMF, PCA
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.preprocessing import StandardScaler
@@ -43,6 +43,7 @@ CONFIG_TYPES = dict(
     # model
     CustomLSTMModelV1=CustomLSTMModelV1,
     CustomTransformerModelV1=CustomTransformerModelV1,
+    CustomLSTMModelV1WithAttention=CustomLSTMModelV1WithAttention,
     # optimizer
     AdamW=AdamW,
     # scheduler
