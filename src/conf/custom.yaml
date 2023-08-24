@@ -110,7 +110,7 @@ nn:
 
   feature:
     feature_names: ???
-    auxiliary_names: ??? # f_d_*, f_t_*, f_{x,y}_grpby_uid_*, f_{x,y}_grpby_uid_dayofweek_*, f_{x,y}_grpby_uid_dayofweek_t_label*
+    auxiliary_names: ??? # f_d_*, f_t_*, f_(x|y)_grpby_uid_.*_agg_.*
     target_names: ["x", "y"]
 
   model:
@@ -118,8 +118,8 @@ nn:
     input_size1: ???
     input_size2: ???
     hidden_size: 2
-    num_layers: 2
-    dropout: 0.1
+    num_layers: 1
+    dropout: 0.5
     output_size: ???
 
   criterion:

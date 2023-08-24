@@ -1,6 +1,7 @@
 import gc
 import math
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -51,18 +52,13 @@ def calc_steps(
 
 
 def get_auxiliary_names(auxiliary_names, columns):
+    def is_aux_agg_feature_name(s):
+        pattern = r"f_(x|y)_grpby_uid_.*_agg_.*"
+        return bool(re.match(pattern, s))
+
     if auxiliary_names == "???":
         f_dt_columns = [x for x in columns if x.startswith("f_d") or x.startswith("f_t")]
-        cols1 = [x for x in columns if x.startswith("f_x_grpby_uid_") or x.startswith("f_y_grpby_uid_")]
-        cols2 = [
-            x for x in columns if x.startswith("f_x_grpby_uid_dayofweek_") or x.startswith("f_y_grpby_uid_dayofweek_")
-        ]
-        cols3 = [
-            x
-            for x in columns
-            if x.startswith("f_x_grpby_uid_dayofweek_t_label_") or x.startswith("f_y_grpby_uid_dayofweek_t_label_")
-        ]
-        xy_agg_columns = cols1 + cols2 + cols3
+        xy_agg_columns = [x for x in columns if is_aux_agg_feature_name(x)]
         return f_dt_columns + xy_agg_columns
 
     return auxiliary_names
