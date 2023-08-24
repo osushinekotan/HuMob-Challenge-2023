@@ -395,6 +395,13 @@ def run() -> None:
     raw_test_df = task_dataset.raw_test_data
     poi_df = task_dataset.poi_data
 
+    # select uid
+    max_uid = raw_train_df["uid"].nunique()
+    uids = pd.Series(raw_train_df["uid"].unique()).sample(
+        min(config["/fe/n_train_uid"], max_uid), random_state=config["/global/seed"]
+    )
+    raw_train_df = raw_train_df[raw_train_df["uid"].isin(uids)].reset_index(drop=True)
+
     if DEBUG:
         raw_train_df = convert_debug_train_df(
             df=raw_train_df,

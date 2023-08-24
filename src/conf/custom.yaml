@@ -8,6 +8,7 @@ fe:
   out_dir: "001/features"
   overwrite: False
   dataset: "task2_dataset"
+  n_train_uid: 25000
   use_poi_features: True
   poi_decomposer:
     type: NMF
@@ -117,9 +118,9 @@ nn:
     type: CustomLSTMModelV1WithAttention
     input_size1: ???
     input_size2: ???
-    hidden_size: 2
+    hidden_size: 8
     num_layers: 1
-    dropout: 0.5
+    dropout: 0
     output_size: ???
 
   criterion:
