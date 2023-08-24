@@ -8,7 +8,7 @@ fe:
   out_dir: "001/features"
   overwrite: False
   dataset: "task1_dataset"
-  n_train_uid: 15000
+  n_train_uid: 20000
   use_poi_features: True
   poi_decomposer:
     type: NMF

@@ -474,16 +474,21 @@ def run() -> None:
     logger.info(f"train isnull sum :\n {train_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
     logger.info(f"test isnull sum :\n {test_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
 
-    # post feature engineering (transform feature)
-    train_feature_df = post_make_features(df=train_feature_df)
-    test_feature_df = post_make_features(df=test_feature_df)
+    with logger.time_log("post_make_features"):
+        # post feature engineering (transform feature)
+        train_feature_df = post_make_features(df=train_feature_df)
+        test_feature_df = post_make_features(df=test_feature_df)
 
-    # scaling
-    train_feature_df, test_feature_df = scaling(
-        config=config,
-        train_feature_df=train_feature_df,
-        test_feature_df=test_feature_df,
-    )
+    logger.debug(f"train_feature_df : {train_feature_df.shape}")
+    logger.debug(f"test_feature_df : {test_feature_df.shape}")
+
+    with logger.time_log("scaling"):
+        # scaling
+        train_feature_df, test_feature_df = scaling(
+            config=config,
+            train_feature_df=train_feature_df,
+            test_feature_df=test_feature_df,
+        )
 
     # save features
     save_features(config=config, features_df=train_feature_df, name="train_feature_df")
