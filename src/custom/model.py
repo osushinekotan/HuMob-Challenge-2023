@@ -8,12 +8,34 @@ warnings.filterwarnings("ignore", "Lazy modules are a new feature under heavy de
 
 
 class CustomLSTMModelV1(nn.Module):
-    def __init__(self, input_size1, input_size2, hidden_size, output_size):
+    def __init__(
+        self,
+        input_size1,
+        input_size2,
+        hidden_size,
+        num_layers,
+        dropout,
+        output_size,
+    ):
         super().__init__()
         self.hidden_size = hidden_size
 
-        self.lstm1 = nn.LSTM(input_size1, hidden_size, batch_first=True, bidirectional=True)
-        self.lstm2 = nn.LSTM(input_size2, hidden_size, batch_first=True, bidirectional=True)
+        self.encoder = nn.LSTM(
+            input_size1,
+            hidden_size,
+            num_layers=num_layers,
+            dropout=dropout,
+            batch_first=True,
+            bidirectional=True,
+        )
+        self.decoder = nn.LSTM(
+            input_size2,
+            hidden_size,
+            num_layers=num_layers,
+            dropout=dropout,
+            batch_first=True,
+            bidirectional=True,
+        )
 
         self.out = nn.Linear(hidden_size * 2, output_size)
 
@@ -31,10 +53,10 @@ class CustomLSTMModelV1(nn.Module):
             batch_first=True,
             enforce_sorted=False,
         )
-        x1, (hn_1, cn_1) = self.lstm1(s1)
+        x1, (hn_1, cn_1) = self.encoder(s1)
 
-        # Use the final hidden and cell state of lstm1 as initial state for lstm2
-        x2, _ = self.lstm2(s2, (hn_1, cn_1))
+        # Use the final hidden and cell state of encoder as initial state for decoder
+        x2, _ = self.decoder(s2, (hn_1, cn_1))
         x, _ = pad_packed_sequence(x2, batch_first=True)  # to fixible length
         x = self.out(x)
 
@@ -53,16 +75,19 @@ class CustomTransformerModelV1(nn.Module):
         num_decoder_layers=6,
     ):
         super().__init__()
+        """Oneshot sequence prediction model"""
+
         self.embedding_src = nn.Linear(input_size_src, d_model)
         self.embedding_tgt = nn.Linear(input_size_tgt, d_model)
 
-        self.transformer = nn.Transformer(
-            d_model,
-            nhead,
-            num_encoder_layers,
-            num_decoder_layers,
-            batch_first=True,
-        )
+        # Encoder
+        encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, batch_first=True)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_encoder_layers)
+
+        # Decoder
+        decoder_layer = nn.TransformerDecoderLayer(d_model, nhead, batch_first=True)
+        self.decoder = nn.TransformerDecoder(decoder_layer, num_decoder_layers)
+
         self.out = nn.Linear(d_model, output_size)
 
     def forward(self, batch):
@@ -72,12 +97,9 @@ class CustomTransformerModelV1(nn.Module):
         src_mask = batch["feature_padding_mask"]
         tgt_mask = batch["auxiliary_padding_mask"]
 
-        x = self.transformer(
-            src=x_src,
-            tgt=x_tgt,
-            src_key_padding_mask=src_mask,
-            tgt_key_padding_mask=tgt_mask,
-        )
-        x = self.out(x)
+        encoder_output = self.encoder(x_src, src_key_padding_mask=src_mask)
+        decoder_output = self.decoder(tgt=x_tgt, memory=encoder_output, tgt_key_padding_mask=tgt_mask)
+
+        x = self.out(decoder_output)
 
         return x

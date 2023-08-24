@@ -114,13 +114,14 @@ nn:
     target_names: ["x", "y"]
 
   model:
-    type: CustomLSTMModelV1
-    input_size1: ???
-    input_size2: ???
-    hidden_size: 2
-    num_layers: 2
-    dropout: 0.1
+    type: CustomTransformerModelV1
+    input_size_src: ???
+    input_size_tgt: ???
+    d_model: 2
     output_size: ???
+    nhead: 1
+    num_encoder_layers: 1
+    num_decoder_layers: 1
 
   criterion:
     type: SeqMSELoss
