@@ -1,3 +1,4 @@
+import gc
 import hashlib
 import re
 from functools import cached_property, wraps
@@ -14,7 +15,7 @@ from logger import Logger
 from pytorch_pfn_extras.config import Config
 from tqdm import tqdm
 from util import load_yaml, reduce_mem_usage
-import gc
+
 logger = Logger(name="fe")
 
 
@@ -394,8 +395,8 @@ def run() -> None:
     raw_train_df = task_dataset.raw_train_data
     raw_test_df = task_dataset.raw_test_data
     poi_df = task_dataset.poi_data
-    
-    del TaskDatset
+
+    del task_dataset
     gc.collect()
 
     # select uid
@@ -448,9 +449,9 @@ def run() -> None:
     # target enginineering
     train_feature_df = transform_regression_target(config=config, df=raw_train_df, prefix="train_")
     test_feature_df = transform_regression_target(config=config, df=raw_test_df, prefix="test_")
-    del raw_train_df, raw_test_data
+    del raw_train_df, raw_test_df
     gc.collect()
-    
+
     # feature engineering
     train_feature_df = make_features(
         config=config,
