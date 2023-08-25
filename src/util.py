@@ -49,7 +49,7 @@ def load_json(filepath: Path) -> dict:
     return dic
 
 
-def reduce_mem_usage(df: pd.DataFrame, verbose: bool = False) -> pd.DataFrame:
+def reduce_mem_usage(df: pd.DataFrame, verbose: bool = False, ignore_columns: list = []) -> pd.DataFrame:
     if verbose:
         cols = df.columns[df.columns.duplicated()]
         if len(cols) == 0:
@@ -63,6 +63,10 @@ def reduce_mem_usage(df: pd.DataFrame, verbose: bool = False) -> pd.DataFrame:
     for col in df.columns:
         col_type = df[col].dtypes
         if col_type in numerics:
+            if col in ignore_columns:
+                dfs.append(df[col])
+                continue
+
             c_min = df[col].min()
             c_max = df[col].max()
             if str(col_type)[:3] == "int":
