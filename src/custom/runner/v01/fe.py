@@ -1,3 +1,4 @@
+import gc
 import hashlib
 import re
 from functools import cached_property, wraps
@@ -223,26 +224,32 @@ def add_poi_features(config, df, poi_df, batch_size=100000):
     return merged_df
 
 
-def scaling(config, train_feature_df, test_feature_df):
-    n = len(train_feature_df)
+def scaling(config, train_feature_df, test_feature_df, batch_size=10):
+    # 特徴量のカラムと非特徴量のカラムを取得
+    feature_cols = [x for x in train_feature_df.columns if x.startswith("f_")]
 
-    all_df = pd.concat([train_feature_df, test_feature_df]).reset_index()
-    feature_cols = [x for x in all_df.columns if x.startswith("f_")]
-    nofeature_cols = [x for x in all_df.columns if not x.startswith("f_")]
-
-    assert sorted(feature_cols + nofeature_cols) == sorted(all_df.columns)
+    train_feature_df = reduce_mem_usage(train_feature_df, verbose=True)
+    test_feature_df = reduce_mem_usage(test_feature_df, verbose=True)
 
     scaler = config["/fe/scaling"]
-    scaled_df = pd.DataFrame(scaler.fit_transform(all_df[feature_cols]), columns=feature_cols)
 
-    all_df = pd.concat([all_df[nofeature_cols], scaled_df], axis=1)
-    scaled_train_feature_df = all_df.iloc[:n].reset_index(drop=True)
-    scaled_test_feature_df = all_df[n:].reset_index(drop=True)
+    for i in tqdm(range(0, len(feature_cols), batch_size)):
+        batch_cols = feature_cols[i : i + batch_size]
 
-    assert len(train_feature_df) == len(scaled_train_feature_df)
-    assert len(test_feature_df) == len(scaled_test_feature_df)
+        # 特定のバッチのカラムを結合
+        combined_features = np.vstack((train_feature_df[batch_cols].values, test_feature_df[batch_cols].values))
+        combined_features = scaler.fit_transform(combined_features)
 
-    return scaled_train_feature_df.fillna(0), scaled_test_feature_df.fillna(0)
+        n = len(train_feature_df)
+
+        # スケーリングされた特徴量で元のものを置き換え
+        train_feature_df[batch_cols] = combined_features[:n]
+        test_feature_df[batch_cols] = combined_features[n:]
+
+        del combined_features
+        gc.collect()
+
+    return train_feature_df.fillna(0), test_feature_df.fillna(0)
 
 
 def assign_d_cycle_number(config, df):
@@ -441,6 +448,7 @@ def run() -> None:
 
     # add fold index
     raw_train_df = add_fold_index(config=config, df=raw_train_df)
+    raw_test_df["fold"] = np.nan
 
     # target enginineering
     train_feature_df = transform_regression_target(config=config, df=raw_train_df, prefix="train_")
