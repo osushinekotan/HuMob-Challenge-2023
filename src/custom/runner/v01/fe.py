@@ -225,26 +225,35 @@ def add_poi_features(config, df, poi_df, batch_size=100000):
 
 
 def scaling(config, train_feature_df, test_feature_df):
+    # 特徴量のカラムと非特徴量のカラムを取得
+    feature_cols = [x for x in train_feature_df.columns if x.startswith("f_")]
+    nofeature_cols = [x for x in train_feature_df.columns if not x.startswith("f_")]
+
+    # 特徴量を結合
+    all_features = np.vstack((train_feature_df[feature_cols].values, test_feature_df[feature_cols].values))
+
+    # scalerを取得してスケーリング適用
+    scaler = config["/fe/scaling"]
+    all_features_scaled = scaler.fit_transform(all_features)
+
+    del all_features
+    gc.collect()
+
+    # スケーリングされた特徴量を訓練データとテストデータに再分割
     n = len(train_feature_df)
 
-    all_df = pd.concat([train_feature_df, test_feature_df]).reset_index()
-    feature_cols = [x for x in all_df.columns if x.startswith("f_")]
-    nofeature_cols = [x for x in all_df.columns if not x.startswith("f_")]
+    # 非特徴量のカラムと結合
+    scaled_train_data = np.hstack((train_feature_df[nofeature_cols].values, all_features_scaled[:n]))
+    scaled_test_data = np.hstack((test_feature_df[nofeature_cols].values, all_features_scaled[n:]))
 
-    assert sorted(feature_cols + nofeature_cols) == sorted(all_df.columns)
+    del all_features_scaled
+    gc.collect()
 
-    scaler = config["/fe/scaling"]
-    scaled_df = pd.DataFrame(scaler.fit_transform(all_df[feature_cols]), columns=feature_cols)
+    # NumPy配列をDataFrameに変換して返す（もし必要な場合）
+    scaled_train_df = pd.DataFrame(scaled_train_data, columns=nofeature_cols + feature_cols).fillna(0)
+    scaled_test_df = pd.DataFrame(scaled_test_data, columns=nofeature_cols + feature_cols).fillna(0)
 
-    all_df = pd.concat([all_df[nofeature_cols], scaled_df], axis=1)
-    scaled_train_feature_df = all_df.iloc[:n].reset_index(drop=True)
-    scaled_test_feature_df = all_df[n:].reset_index(drop=True)
-
-    assert len(train_feature_df) == len(scaled_train_feature_df)
-    assert len(test_feature_df) == len(scaled_test_feature_df)
-
-    return scaled_train_feature_df.fillna(0), scaled_test_feature_df.fillna(0)
-
+    return scaled_train_df, scaled_test_df
 
 def assign_d_cycle_number(config, df):
     cycles = config["/fe/cycles"]
