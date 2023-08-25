@@ -229,8 +229,13 @@ def scaling(config, train_feature_df, test_feature_df):
     feature_cols = [x for x in train_feature_df.columns if x.startswith("f_")]
     nofeature_cols = [x for x in train_feature_df.columns if not x.startswith("f_")]
 
+    train_feature_df = reduce_mem_usage(train_feature_df)
+    test_feature_df = reduce_mem_usage(test_feature_df)
+
     # 特徴量を結合
     all_features = np.vstack((train_feature_df[feature_cols].values, test_feature_df[feature_cols].values))
+    train_feature_df = train_feature_df.drop(feature_cols, axis=1)
+    test_feature_df = test_feature_df.drop(feature_cols, axis=1)
 
     # scalerを取得してスケーリング適用
     scaler = config["/fe/scaling"]
@@ -455,6 +460,7 @@ def run() -> None:
 
     # add fold index
     raw_train_df = add_fold_index(config=config, df=raw_train_df)
+    raw_test_df["fold"] = np.nan
 
     # target enginineering
     train_feature_df = transform_regression_target(config=config, df=raw_train_df, prefix="train_")
