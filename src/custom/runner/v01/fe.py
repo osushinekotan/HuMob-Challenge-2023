@@ -238,6 +238,7 @@ def scaling(config, train_feature_df, test_feature_df):
 
     del all_features
     gc.collect()
+    logger.debug("del all_features")
 
     # スケーリングされた特徴量を訓練データとテストデータに再分割
     n = len(train_feature_df)
@@ -248,12 +249,11 @@ def scaling(config, train_feature_df, test_feature_df):
 
     del all_features_scaled
     gc.collect()
+    logger.debug("del all_features_scaled")
 
-    # NumPy配列をDataFrameに変換して返す（もし必要な場合）
-    scaled_train_df = pd.DataFrame(scaled_train_data, columns=nofeature_cols + feature_cols).fillna(0)
-    scaled_test_df = pd.DataFrame(scaled_test_data, columns=nofeature_cols + feature_cols).fillna(0)
-
-    return scaled_train_df, scaled_test_df
+    return pd.DataFrame(scaled_train_data, columns=nofeature_cols + feature_cols).fillna(0), pd.DataFrame(
+        scaled_test_data, columns=nofeature_cols + feature_cols
+    ).fillna(0)
 
 
 def assign_d_cycle_number(config, df):
