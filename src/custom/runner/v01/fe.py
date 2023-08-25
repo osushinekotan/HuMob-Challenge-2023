@@ -224,41 +224,32 @@ def add_poi_features(config, df, poi_df, batch_size=100000):
     return merged_df
 
 
-def scaling(config, train_feature_df, test_feature_df):
+def scaling(config, train_feature_df, test_feature_df, batch_size=10):
     # 特徴量のカラムと非特徴量のカラムを取得
     feature_cols = [x for x in train_feature_df.columns if x.startswith("f_")]
-    nofeature_cols = [x for x in train_feature_df.columns if not x.startswith("f_")]
 
-    train_feature_df = reduce_mem_usage(train_feature_df)
-    test_feature_df = reduce_mem_usage(test_feature_df)
+    train_feature_df = reduce_mem_usage(train_feature_df, verbose=True)
+    test_feature_df = reduce_mem_usage(test_feature_df, verbose=True)
 
-    # 特徴量を結合
-    all_features = np.vstack((train_feature_df[feature_cols].values, test_feature_df[feature_cols].values))
-    train_feature_df = train_feature_df.drop(feature_cols, axis=1)
-    test_feature_df = test_feature_df.drop(feature_cols, axis=1)
-
-    # scalerを取得してスケーリング適用
     scaler = config["/fe/scaling"]
-    all_features_scaled = scaler.fit_transform(all_features)
 
-    del all_features
-    gc.collect()
-    logger.debug("del all_features")
+    for i in tqdm(range(0, len(feature_cols), batch_size)):
+        batch_cols = feature_cols[i : i + batch_size]
 
-    # スケーリングされた特徴量を訓練データとテストデータに再分割
-    n = len(train_feature_df)
+        # 特定のバッチのカラムを結合
+        combined_features = np.vstack((train_feature_df[batch_cols].values, test_feature_df[batch_cols].values))
+        combined_features = scaler.fit_transform(combined_features)
 
-    # 非特徴量のカラムと結合
-    scaled_train_data = np.hstack((train_feature_df[nofeature_cols].values, all_features_scaled[:n]))
-    scaled_test_data = np.hstack((test_feature_df[nofeature_cols].values, all_features_scaled[n:]))
+        n = len(train_feature_df)
 
-    del all_features_scaled
-    gc.collect()
-    logger.debug("del all_features_scaled")
+        # スケーリングされた特徴量で元のものを置き換え
+        train_feature_df[batch_cols] = combined_features[:n]
+        test_feature_df[batch_cols] = combined_features[n:]
 
-    return pd.DataFrame(scaled_train_data, columns=nofeature_cols + feature_cols).fillna(0), pd.DataFrame(
-        scaled_test_data, columns=nofeature_cols + feature_cols
-    ).fillna(0)
+        del combined_features
+        gc.collect()
+
+    return train_feature_df.fillna(0), test_feature_df.fillna(0)
 
 
 def assign_d_cycle_number(config, df):
