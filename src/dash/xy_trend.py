@@ -55,7 +55,9 @@ def load_and_process_data():
     df = read_parquet_from_csv(filepath=INPUT / "task1_dataset.csv.gz", dirpath=INPUT)
 
     if DEBUG:
-        user_ids = df["uid"].sample(10, random_state=None)
+        uids = df.query("x == 999")["uid"].unique()
+        df = df[~df["uid"].isin(uids)].reset_index(drop=True)
+        user_ids = pd.Series(df["uid"].unique()).sample(100, random_state=None).tolist() + [64902]
         df = df[df["uid"].isin(user_ids)]
 
     df["time"] = (df["d"].astype(str).str.zfill(2) + df["t"].astype(str).str.zfill(2)).astype(int)

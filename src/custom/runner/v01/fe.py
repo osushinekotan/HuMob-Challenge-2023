@@ -228,8 +228,8 @@ def scaling(config, train_feature_df, test_feature_df, batch_size=10):
     # 特徴量のカラムと非特徴量のカラムを取得
     feature_cols = [x for x in train_feature_df.columns if x.startswith("f_")]
 
-    train_feature_df = reduce_mem_usage(train_feature_df, verbose=True)
-    test_feature_df = reduce_mem_usage(test_feature_df, verbose=True)
+    train_feature_df = reduce_mem_usage(train_feature_df, verbose=True, ignore_columns=["uid"])
+    test_feature_df = reduce_mem_usage(test_feature_df, verbose=True, ignore_columns=["uid"])
 
     scaler = config["/fe/scaling"]
 
