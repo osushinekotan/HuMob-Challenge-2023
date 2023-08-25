@@ -228,8 +228,8 @@ def scaling(config, train_feature_df, test_feature_df, batch_size=10):
     # 特徴量のカラムと非特徴量のカラムを取得
     feature_cols = [x for x in train_feature_df.columns if x.startswith("f_")]
 
-    train_feature_df = reduce_mem_usage(train_feature_df, verbose=True)
-    test_feature_df = reduce_mem_usage(test_feature_df, verbose=True)
+    train_feature_df = reduce_mem_usage(train_feature_df, verbose=True, ignore_columns=["uid"])
+    test_feature_df = reduce_mem_usage(test_feature_df, verbose=True, ignore_columns=["uid"])
 
     scaler = config["/fe/scaling"]
 
@@ -402,6 +402,9 @@ def run() -> None:
     raw_test_df = task_dataset.raw_test_data
     poi_df = task_dataset.poi_data
 
+    del task_dataset
+    gc.collect()
+
     # select uid
     max_uid = raw_train_df["uid"].nunique()
     uids = pd.Series(raw_train_df["uid"].unique()).sample(
@@ -453,6 +456,8 @@ def run() -> None:
     # target enginineering
     train_feature_df = transform_regression_target(config=config, df=raw_train_df, prefix="train_")
     test_feature_df = transform_regression_target(config=config, df=raw_test_df, prefix="test_")
+    del raw_train_df, raw_test_df
+    gc.collect()
 
     # feature engineering
     train_feature_df = make_features(
@@ -476,16 +481,21 @@ def run() -> None:
     logger.info(f"train isnull sum :\n {train_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
     logger.info(f"test isnull sum :\n {test_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
 
-    # post feature engineering (transform feature)
-    train_feature_df = post_make_features(df=train_feature_df)
-    test_feature_df = post_make_features(df=test_feature_df)
+    with logger.time_log("post_make_features"):
+        # post feature engineering (transform feature)
+        train_feature_df = post_make_features(df=train_feature_df)
+        test_feature_df = post_make_features(df=test_feature_df)
 
-    # scaling
-    train_feature_df, test_feature_df = scaling(
-        config=config,
-        train_feature_df=train_feature_df,
-        test_feature_df=test_feature_df,
-    )
+    logger.debug(f"train_feature_df : {train_feature_df.shape}")
+    logger.debug(f"test_feature_df : {test_feature_df.shape}")
+
+    with logger.time_log("scaling"):
+        # scaling
+        train_feature_df, test_feature_df = scaling(
+            config=config,
+            train_feature_df=train_feature_df,
+            test_feature_df=test_feature_df,
+        )
 
     # save features
     save_features(config=config, features_df=train_feature_df, name="train_feature_df")
