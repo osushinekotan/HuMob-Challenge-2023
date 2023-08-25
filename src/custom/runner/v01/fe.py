@@ -255,6 +255,7 @@ def scaling(config, train_feature_df, test_feature_df):
 
     return scaled_train_df, scaled_test_df
 
+
 def assign_d_cycle_number(config, df):
     cycles = config["/fe/cycles"]
     for cycle in cycles:
