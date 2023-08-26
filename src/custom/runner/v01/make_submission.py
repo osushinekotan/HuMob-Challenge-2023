@@ -31,6 +31,15 @@ def run():
 
     logger.debug(f"\nsubmission_df\n\n{submission_df}")
 
+    task_name = pre_eval_config["fe"]["dataset"].split("_")[0]
+    submission_df.to_csv(
+        out_dir
+        / pre_eval_config["nn"]["out_dir"]
+        / pre_eval_config["fe"]["dataset"]
+        / f"osushineko_{task_name}midterm_humob.csv.gz",
+        compression="gzip",
+    )
+
 
 if __name__ == "__main__":
     with logger.time_log():

@@ -49,7 +49,7 @@ def load_json(filepath: Path) -> dict:
     return dic
 
 
-def reduce_mem_usage(df: pd.DataFrame, verbose: bool = False, ignore_columns: list = []) -> pd.DataFrame:
+def reduce_mem_usage(df: pd.DataFrame, verbose: bool = False, ignore_columns: list = ["uid"]) -> pd.DataFrame:
     if verbose:
         cols = df.columns[df.columns.duplicated()]
         if len(cols) == 0:
