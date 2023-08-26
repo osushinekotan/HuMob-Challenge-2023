@@ -1,14 +1,14 @@
 global:
   project: "HuMob-Challenge-2023"
   seed: 8823
-  debug: True
+  debug: False
   resources: "/workspace/resources"
 
 fe:
   out_dir: "001/features"
   overwrite: False
-  dataset: "task2_dataset"
-  n_train_uid: 20000
+  dataset: "task1_dataset"
+  n_train_uid: 10000
   use_poi_features: True
   poi_decomposer:
     type: NMF
@@ -67,18 +67,6 @@ fe:
     - {
         type: D60MaskGroupedSimpleFeatureExtoractor,
         group_key: ["uid", "weekend"],
-        group_values: ["x", "y"],
-        agg_methods: ["min", "max", "mean", "median", "std"],
-      }
-    - {
-        type: D60MaskGroupedSimpleFeatureExtoractor,
-        group_key: ["uid", "weekend", "t_label"],
-        group_values: ["x", "y"],
-        agg_methods: ["min", "max", "mean", "median", "std"],
-      }
-    - {
-        type: D60MaskGroupedSimpleFeatureExtoractor,
-        group_key: ["uid", "dayofweek", "t_label"],
         group_values: ["x", "y"],
         agg_methods: ["min", "max", "mean", "median", "std"],
       }
