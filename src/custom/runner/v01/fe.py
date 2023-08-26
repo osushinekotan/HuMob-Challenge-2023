@@ -1,7 +1,6 @@
 import gc
 import hashlib
 import re
-from concurrent.futures import ProcessPoolExecutor
 from functools import cached_property, wraps
 from pathlib import Path
 from typing import Callable
@@ -329,7 +328,6 @@ def transform_xy_999_to_nan(df):
 
 
 def get_agg_method(s):
-    # agg_の後に続く文字列を取得
     pattern = re.compile(r"agg_([^_]+)")
     match = pattern.search(s)
     if match:
@@ -337,35 +335,33 @@ def get_agg_method(s):
     return None
 
 
-def fillna_grpby_uid_for_col(data):
-    df, col = data
-
-    if "_grpby_uid_" not in col:
-        return col, df[col]
-
-    agg_method = get_agg_method(col)
-    if agg_method is None:
-        return col, df[col]
-
-    nan_indices = df[df[col].isna()].index
-    if len(nan_indices) == 0:
-        return col, df[col]
-
-    logger.debug(f"fillna_grpby_uid : {col}")
-    for idx in nan_indices:
-        uid = df.loc[idx, "uid"]
-        fill_value = df[df["uid"] == uid][col].agg(agg_method)
-        df.loc[idx, col] = fill_value
-
-    return col, df[col]
+def get_group_value(s):
+    pattern = re.compile(r"f_([^_]+)")
+    match = pattern.search(s)
+    if match:
+        return match.group(1)
+    return None
 
 
-def fillna_grpby_uid(df, n_processes=6):
-    with ProcessPoolExecutor(max_workers=n_processes) as executor:
-        results = list(executor.map(fillna_grpby_uid_for_col, [(df, col) for col in df.columns]))
+def fillna_grpby_uid(df):
+    for col in df.columns:
+        if "_grpby_uid_" not in col:
+            continue
+        agg_method = get_agg_method(col)
+        group_val = get_group_value(col)
 
-    result_df = pd.concat({col: series for col, series in results}, axis=1)
-    return result_df
+        if agg_method is None:
+            continue
+
+        nan_uids = df.loc[df[col].isna(), "uid"].unique()
+        if len(nan_uids) == 0:
+            continue
+
+        logger.debug(f"fillna_grpby_uid : {col}")
+        for nan_uid in tqdm(nan_uids):
+            fill_value = df[df["uid"] == nan_uid][group_val].agg(agg_method)
+            df.loc[(df["uid"] == nan_uid).values & (df[col].isnull().values), col] = fill_value
+    return df
 
 
 def post_make_features(df):
