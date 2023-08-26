@@ -41,7 +41,7 @@ class TaskDatset:
             raw_train_df = self.raw_data[~self.raw_data["uid"].isin(uids)].reset_index(drop=True)
             raw_train_df.to_parquet(self.raw_train_filepath)
 
-        return raw_train_df
+        return raw_train_df.astype({"uid": str})
 
     @property
     def raw_test_data(self) -> pd.DataFrame:
@@ -53,7 +53,7 @@ class TaskDatset:
             uids = self.raw_data.query("x == 999")["uid"].unique()
             raw_test_df = self.raw_data[self.raw_data["uid"].isin(uids)].reset_index(drop=True)
             raw_test_df.to_parquet(self.raw_test_filepath)
-        return raw_test_df
+        return raw_test_df.astype({"uid": str})
 
     @cached_property
     def raw_data(self) -> pd.DataFrame:
