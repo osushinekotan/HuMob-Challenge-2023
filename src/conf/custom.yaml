@@ -102,7 +102,7 @@ nn:
   device: ???
   padding_value: -999
   max_epochs: 6
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 32
   clip_grad_norm: 1
   fp16: True
   batch_scheduler: True
@@ -157,7 +157,7 @@ nn:
         is_train_mode: True
         padding_value: "@/nn/padding_value"
         return_padding_mask: True
-      batch_size: 8
+      batch_size: 4
       num_workers: 2
       shuffle: False
       pin_memory: True
