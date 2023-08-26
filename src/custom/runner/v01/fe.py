@@ -213,7 +213,6 @@ def join_poi_to_task_data_batched(config, task_df, poi_df, batch_size=1000):
         )
         .fillna(0)
         .reset_index(drop=True)
-        .astype(np.int16)
     )
 
 
@@ -300,8 +299,8 @@ def transform_regression_target(config: Config, df: pd.DataFrame, prefix: str) -
         df.loc[target_mask, "x"] = df.loc[target_mask, "x"] - df.loc[target_mask, "x_mean"]
         df.loc[target_mask, "y"] = df.loc[target_mask, "y"] - df.loc[target_mask, "y_mean"]
 
-        logger.debug(df[["x", "x_mean", "original_x"]].head())
-        logger.debug(df[["y", "y_mean", "original_y"]].head())
+        logger.debug(df[["uid", "x", "x_mean", "original_x"]].head())
+        logger.debug(df[["uid", "y", "y_mean", "original_y"]].head())
         return df
 
     elif config["/fe/regression_target_transform"] == "z_score":
@@ -314,8 +313,8 @@ def transform_regression_target(config: Config, df: pd.DataFrame, prefix: str) -
             target_mask, "y_std"
         ]
 
-        logger.debug(df[["x", "x_mean", "original_x"]].head())
-        logger.debug(df[["y", "y_mean", "original_y"]].head())
+        logger.debug(df[["uid", "x", "x_mean", "original_x"]].head())
+        logger.debug(df[["uid", "y", "y_mean", "original_y"]].head())
         return df
 
     else:
@@ -424,6 +423,7 @@ def run() -> None:
             n_uids=100,
             random_state=config["/global/seed"],
         )
+        logger.debug(f"debug : {raw_train_df['uid'].describe()}")
 
     # add POIcat features (f_*)
     if config["/fe/use_poi_features"]:
@@ -431,28 +431,36 @@ def run() -> None:
             raw_train_df = add_poi_features(config=config, df=raw_train_df, poi_df=poi_df)
             raw_test_df = add_poi_features(config=config, df=raw_test_df, poi_df=poi_df)
 
+    logger.debug(f"poi : {raw_train_df['uid'].describe()}")
+
     # 999 -> nan
     raw_test_df = transform_xy_999_to_nan(raw_test_df)
+    logger.debug(f"999->nan : {raw_train_df['uid'].describe()}")
 
     # assign cycle number
     raw_train_df = assign_d_cycle_number(config, df=raw_train_df)
     raw_test_df = assign_d_cycle_number(config, df=raw_test_df)
+    logger.debug(f"cycle number : {raw_train_df['uid'].describe()}")
 
     # assign day of week
     raw_train_df = assign_day_of_week(raw_train_df)
     raw_test_df = assign_day_of_week(raw_test_df)
+    logger.debug(f"day of week : {raw_train_df['uid'].describe()}")
 
     # assign t_label (morning and midnight)
     raw_train_df = assign_t_labe(raw_train_df)
     raw_test_df = assign_t_labe(raw_test_df)
+    logger.debug(f"t_label : {raw_train_df['uid'].describe()}")
 
     # copy original target
     raw_train_df = add_original_raw_targets(raw_train_df)
     raw_test_df = add_original_raw_targets(raw_test_df)
+    logger.debug(f"copy original target : {raw_train_df['uid'].describe()}")
 
     # add fold index
     raw_train_df = add_fold_index(config=config, df=raw_train_df)
     raw_test_df["fold"] = np.nan
+    logger.debug(f"{raw_train_df['uid'].describe()}")
 
     # target enginineering
     train_feature_df = transform_regression_target(config=config, df=raw_train_df, prefix="train_")
