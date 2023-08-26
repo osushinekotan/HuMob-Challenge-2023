@@ -41,7 +41,7 @@ class TaskDatset:
             raw_train_df = self.raw_data[~self.raw_data["uid"].isin(uids)].reset_index(drop=True)
             raw_train_df.to_parquet(self.raw_train_filepath)
 
-        return raw_train_df
+        return raw_train_df.astype({"uid": str})
 
     @property
     def raw_test_data(self) -> pd.DataFrame:
@@ -53,7 +53,7 @@ class TaskDatset:
             uids = self.raw_data.query("x == 999")["uid"].unique()
             raw_test_df = self.raw_data[self.raw_data["uid"].isin(uids)].reset_index(drop=True)
             raw_test_df.to_parquet(self.raw_test_filepath)
-        return raw_test_df
+        return raw_test_df.astype({"uid": str})
 
     @cached_property
     def raw_data(self) -> pd.DataFrame:
@@ -155,10 +155,9 @@ def make_features(
     @cache(out_dir=out_dir, overwrite=overwrite, no_cache=no_cache)
     def _extract(df, extractor):
         with logger.time_log(target=extractor.__class__.__name__):
-            return extractor(df).astype(np.float32)
+            return reduce_mem_usage(extractor(df))
 
-    features_df = pd.concat([df] + [_extract(df, extractor) for extractor in extractors], axis=1)
-    return features_df
+    return pd.concat([df] + [_extract(df, extractor) for extractor in extractors], axis=1)
 
 
 def save_features(config, features_df, name):
@@ -411,6 +410,8 @@ def run() -> None:
         min(config["/fe/n_train_uid"], max_uid), random_state=config["/global/seed"]
     )
     raw_train_df = raw_train_df[raw_train_df["uid"].isin(uids)].reset_index(drop=True)
+    logger.debug(f"{raw_train_df['uid'].describe()}")
+    logger.debug(f"{raw_test_df['uid'].describe()}")
 
     if DEBUG:
         raw_train_df = convert_debug_train_df(
@@ -459,6 +460,8 @@ def run() -> None:
     del raw_train_df, raw_test_df
     gc.collect()
 
+    logger.debug(f"{train_feature_df['uid'].describe()}")
+
     # feature engineering
     train_feature_df = make_features(
         config=config,
@@ -470,7 +473,7 @@ def run() -> None:
         df=test_feature_df,
         overwrite=True,
     )
-
+    logger.debug(f"{train_feature_df['uid'].describe()}")
     logger.info(f"train isnull sum :\n {train_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
     logger.info(f"test isnull sum :\n {test_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
 
@@ -478,6 +481,7 @@ def run() -> None:
     train_feature_df = fillna_grpby_uid(df=train_feature_df)
     test_feature_df = fillna_grpby_uid(df=test_feature_df)
 
+    logger.debug(f"{train_feature_df['uid'].describe()}")
     logger.info(f"train isnull sum :\n {train_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
     logger.info(f"test isnull sum :\n {test_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
 
@@ -496,6 +500,7 @@ def run() -> None:
             train_feature_df=train_feature_df,
             test_feature_df=test_feature_df,
         )
+        logger.debug(f"{train_feature_df['uid'].describe()}")
 
     # save features
     save_features(config=config, features_df=train_feature_df, name="train_feature_df")
