@@ -371,8 +371,8 @@ def post_make_features(df):
         "uid_dayofweek",
         "uid_t_label",
         "uid_weekend",
-        "uid_weekend_t_label",
-        "uid_dayofweek_t_label",
+        # "uid_weekend_t_label",
+        # "uid_dayofweek_t_label",
     ]
 
     # diff と z_score の計算

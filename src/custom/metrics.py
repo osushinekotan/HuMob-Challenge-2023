@@ -65,6 +65,7 @@ class GeobleuMetric:
         for uid in tqdm(uids):
             a_generated = generated.loc[generated["uid"] == uid, ["d", "t", "x", "y"]].values.tolist()
             a_reference = reference.loc[reference["uid"] == uid, ["d", "t", "original_x", "original_y"]].values.tolist()
+            assert len(a_generated) == len(a_reference), logger.error(uid, len(a_generated), len(a_reference))
             geobleu_score += geobleu.calc_geobleu(a_generated, a_reference, processes=self.processes)
             dtw_score += geobleu.calc_dtw(a_generated, a_reference, processes=self.processes)
 
