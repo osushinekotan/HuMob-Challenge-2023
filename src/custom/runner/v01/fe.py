@@ -257,9 +257,12 @@ def assign_d_cycle_number(config, df):
     return df
 
 
-def assign_day_of_week(df):
+def assign_day_of_week(df, task=1):
     df["dayofweek"] = (df["d"] % 7).astype(int)
     df["weekend"] = df["dayofweek"].isin([6, 0])
+
+    if task == 1:
+        df["weekend"] = np.array(df["weekend"] + df["d"].isin([37, 36]), dtype=bool)  # + holoday
     return df
 
 
@@ -268,6 +271,13 @@ def assign_t_labe(df):
     midnight = {k: 1 for k in list(range(36, 48)) + list(range(0, 12))}
     t_label_mapping = {**morning, **midnight}
     df["t_label"] = df["t"].map(t_label_mapping)
+    return df
+
+
+def assign_detailed_t_label(df):
+    division = 48 // 12  # devide per 2h
+    result_dict = {i: i // division for i in range(48)}
+    df["t_label_2h"] = df["t"].map(result_dict)
     return df
 
 
@@ -343,8 +353,16 @@ def get_group_value(s):
     return None
 
 
-def fillna_grpby_uid(df):
+def fillna_grpby_uid(df, ignore_columns=["uid_weekend_t_label_2h"]):
     for col in df.columns:
+        ignore_flag = False
+        for ignore_col in ignore_columns:
+            if ignore_col in col:
+                ignore_flag = True
+
+        if ignore_flag:
+            continue
+
         if "_grpby_uid_" not in col:
             continue
         agg_method = get_agg_method(col)
@@ -452,19 +470,19 @@ def run() -> None:
     raw_train_df = assign_t_labe(raw_train_df)
     raw_test_df = assign_t_labe(raw_test_df)
 
+    raw_train_df = assign_detailed_t_label(raw_train_df)
+    raw_test_df = assign_detailed_t_label(raw_test_df)
+
     # copy original target
-    raw_train_df = add_original_raw_targets(raw_train_df)
-    raw_test_df = add_original_raw_targets(raw_test_df)
+    train_feature_df = add_original_raw_targets(raw_train_df)
+    test_feature_df = add_original_raw_targets(raw_test_df)
 
-    # add fold index
-    raw_train_df = add_fold_index(config=config, df=raw_train_df)
-    raw_test_df["fold"] = np.nan
-
-    # target enginineering
-    train_feature_df = transform_regression_target(config=config, df=raw_train_df, prefix="train_")
-    test_feature_df = transform_regression_target(config=config, df=raw_test_df, prefix="test_")
     del raw_train_df, raw_test_df
     gc.collect()
+
+    # add fold index
+    train_feature_df = add_fold_index(config=config, df=train_feature_df)
+    test_feature_df["fold"] = np.nan
 
     # feature engineering
     train_feature_df = make_features(
@@ -505,6 +523,10 @@ def run() -> None:
             test_feature_df=test_feature_df,
         )
         logger.debug(f"{train_feature_df['uid'].describe()}")
+
+    # target enginineering
+    train_feature_df = transform_regression_target(config=config, df=train_feature_df, prefix="train_")
+    test_feature_df = transform_regression_target(config=config, df=test_feature_df, prefix="test_")
 
     # save features
     save_features(config=config, features_df=train_feature_df, name="train_feature_df")

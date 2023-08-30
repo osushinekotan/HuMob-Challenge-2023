@@ -1,13 +1,13 @@
 global:
   project: "HuMob-Challenge-2023"
   seed: 8823
-  debug: False
+  debug: True
   resources: "/workspace/resources"
 
 fe:
   out_dir: "001/features"
   overwrite: False
-  dataset: "task1_dataset"
+  dataset: "task2_dataset"
   n_train_uid: 10000
   use_poi_features: True
   poi_decomposer:
@@ -70,7 +70,17 @@ fe:
         group_values: ["x", "y"],
         agg_methods: ["min", "max", "mean", "median", "std"],
       }
-    - { type: RawFeatureExtractor, use_columns: ["d", "t", "x", "y"] } # + poi features
+    - {
+        type: D60MaskGroupedSimpleFeatureExtoractor,
+        group_key: ["uid", "weekend", "t_label_2h"],
+        group_values: ["x", "y"],
+        agg_methods: ["min", "max", "mean", "median", "std"],
+      }
+    - {
+        type: RawFeatureExtractor,
+        use_columns:
+          ["d", "t", "x", "y", "t_label_2h", "t_label", "weekend", "dayofweek"],
+      } # + poi features
 
   regression_target_transform: z_score
   scaling:
@@ -89,7 +99,7 @@ nn:
   out_dir: "001/models"
   device: ???
   padding_value: -999
-  max_epochs: 6
+  max_epochs: 2
   gradient_accumulation_steps: 32
   clip_grad_norm: 1
   fp16: True
@@ -103,7 +113,7 @@ nn:
     target_names: ["x", "y"]
 
   model:
-    type: CustomLSTMModelV1WithAttention
+    type: CustomLSTMModelV1
     input_size1: ???
     input_size2: ???
     hidden_size: 2
@@ -117,7 +127,7 @@ nn:
   metrics:
     type: RMSEGeobleuMetric
     processes: 6
-    sample_size: 500
+    sample_size: 10
     seed: "@/global/seed"
 
   dataset:
