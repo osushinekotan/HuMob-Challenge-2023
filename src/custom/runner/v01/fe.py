@@ -485,6 +485,10 @@ def run() -> None:
     train_feature_df = add_fold_index(config=config, df=train_feature_df)
     test_feature_df["fold"] = np.nan
 
+    # target enginineering
+    train_feature_df = transform_regression_target(config=config, df=train_feature_df, prefix="train_")
+    test_feature_df = transform_regression_target(config=config, df=test_feature_df, prefix="test_")
+
     # feature engineering
     train_feature_df = make_features(
         config=config,
@@ -501,8 +505,18 @@ def run() -> None:
     logger.info(f"test isnull sum :\n {test_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
 
     # fillna simple aggregated features
-    train_feature_df = fillna_grpby_uid(df=train_feature_df)
-    test_feature_df = fillna_grpby_uid(df=test_feature_df)
+    train_feature_df = fillna_grpby_uid(
+        df=train_feature_df,
+        ignore_columns=[
+            "uid_weekend_t_label_2h",
+        ],
+    )
+    test_feature_df = fillna_grpby_uid(
+        df=test_feature_df,
+        ignore_columns=[
+            "uid_weekend_t_label_2h",
+        ],
+    )
 
     logger.debug(f"{train_feature_df['uid'].describe()}")
     logger.info(f"train isnull sum :\n {train_feature_df.isnull().sum().pipe(lambda x: x[x>0])}")
@@ -524,10 +538,6 @@ def run() -> None:
             test_feature_df=test_feature_df,
         )
         logger.debug(f"{train_feature_df['uid'].describe()}")
-
-    # target enginineering
-    train_feature_df = transform_regression_target(config=config, df=train_feature_df, prefix="train_")
-    test_feature_df = transform_regression_target(config=config, df=test_feature_df, prefix="test_")
 
     # save features
     save_features(config=config, features_df=train_feature_df, name="train_feature_df")
