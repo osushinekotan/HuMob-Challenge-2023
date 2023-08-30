@@ -57,7 +57,7 @@ def load_and_process_data():
     if DEBUG:
         uids = df.query("x == 999")["uid"].unique()
         df = df[~df["uid"].isin(uids)].reset_index(drop=True)
-        user_ids = pd.Series(df["uid"].unique()).sample(100, random_state=None).tolist() + [64902]
+        user_ids = pd.Series(df["uid"].unique()).sample(5, random_state=None).tolist() + [64902, 28678]
         df = df[df["uid"].isin(user_ids)]
 
     df["time"] = (df["d"].astype(str).str.zfill(2) + df["t"].astype(str).str.zfill(2)).astype(int)
