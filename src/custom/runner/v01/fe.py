@@ -509,12 +509,14 @@ def run() -> None:
         df=train_feature_df,
         ignore_columns=[
             "uid_weekend_t_label_2h",
+            "uid_dayofweek_t_label_2h",
         ],
     )
     test_feature_df = fillna_grpby_uid(
         df=test_feature_df,
         ignore_columns=[
             "uid_weekend_t_label_2h",
+            "uid_dayofweek_t_label_2h",
         ],
     )
 
