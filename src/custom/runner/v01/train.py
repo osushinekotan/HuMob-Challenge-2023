@@ -57,9 +57,11 @@ def get_auxiliary_names(auxiliary_names, columns):
         return bool(re.match(pattern, s))
 
     if auxiliary_names == "???":
-        f_dt_columns = [x for x in columns if x.startswith("f_d") or x.startswith("f_t")]
+        f_dt_columns = [x for x in columns if x in ["f_d", "f_t"]]
+        f_dt_columns_ext = [x for x in columns if x.startswith("f_d_") or x.startswith("f_t_")]  # f_t_label : ok
+        f_dt_columns_ext2 = [x for x in columns if x in ["f_dayofweek", "f_weekend"]]
         xy_agg_columns = [x for x in columns if is_aux_agg_feature_name(x)]
-        return f_dt_columns + xy_agg_columns
+        return f_dt_columns + xy_agg_columns + f_dt_columns_ext + f_dt_columns_ext2
 
     return auxiliary_names
 

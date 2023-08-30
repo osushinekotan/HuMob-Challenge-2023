@@ -463,8 +463,9 @@ def run() -> None:
     raw_test_df = assign_d_cycle_number(config, df=raw_test_df)
 
     # assign day of week
-    raw_train_df = assign_day_of_week(raw_train_df)
-    raw_test_df = assign_day_of_week(raw_test_df)
+    _task = 1 if config["/fe/dataset"] == "task1_dataset" else 2
+    raw_train_df = assign_day_of_week(raw_train_df, task=_task)
+    raw_test_df = assign_day_of_week(raw_test_df, task=_task)
 
     # assign t_label (morning and midnight)
     raw_train_df = assign_t_labe(raw_train_df)
