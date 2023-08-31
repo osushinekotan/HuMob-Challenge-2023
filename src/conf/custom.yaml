@@ -131,7 +131,7 @@ nn:
 
   metrics:
     type: RMSEGeobleuMetric
-    processes: 6
+    processes: 4
     sample_size: 250
     seed: "@/global/seed"
 
