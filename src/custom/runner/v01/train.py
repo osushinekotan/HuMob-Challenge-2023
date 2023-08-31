@@ -228,8 +228,8 @@ def train_loop(pre_eval_config: dict, train_data: Any, valid_data: Any, loop_nam
     # setup
     wandb.init(
         project=config["/global/project"],
-        name=get_wandb_run_name(config),
-        group=loop_name,
+        name=loop_name,
+        group=get_wandb_run_name(config),
         job_type="train",
         anonymous=None,
         reinit=True,
