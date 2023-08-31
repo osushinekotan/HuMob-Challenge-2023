@@ -172,8 +172,10 @@ def judge_best_or_not(best_score: dict | float, eval_score: dict) -> bool:
         return True
 
     for k in eval_score.keys():
+        if k == "rmse_score":
+            continue
         if best_score[k] < eval_score[k]:
-            return True  # ひとつで評価指標でよくなればOK
+            return True  # dtw, geobleu どちらかが良くなればOK
     return False
 
 
