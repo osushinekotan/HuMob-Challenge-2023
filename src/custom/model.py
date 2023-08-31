@@ -74,12 +74,23 @@ class CustomTransformerModelV1(nn.Module):
         nhead=8,
         num_encoder_layers=6,
         num_decoder_layers=6,
+        dropout=0.1,
     ):
         super().__init__()
         """Oneshot sequence prediction model"""
 
-        self.embedding_src = nn.Linear(input_size_src, d_model)
-        self.embedding_tgt = nn.Linear(input_size_tgt, d_model)
+        self.embedding_src = nn.Sequential(
+            nn.Linear(input_size_src, d_model),
+            nn.LayerNorm(d_model),
+            nn.ReLU(),  
+            nn.Dropout(dropout), 
+        )
+        self.embedding_tgt = nn.Sequential(
+            nn.Linear(input_size_tgt, d_model),
+            nn.LayerNorm(d_model), 
+            nn.ReLU(), 
+            nn.Dropout(dropout), 
+        )
 
         # Encoder
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, batch_first=True)

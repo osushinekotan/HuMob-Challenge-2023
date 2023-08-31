@@ -1,13 +1,13 @@
 global:
   project: "HuMob-Challenge-2023"
   seed: 8823
-  debug: False
+  debug: True
   resources: "/workspace/resources"
 
 fe:
-  out_dir: "005/features"
-  overwrite: False
-  dataset: "task1_dataset"
+  out_dir: "002/features"
+  overwrite: True
+  dataset: "task2_dataset"
   n_train_uid: 10000
   use_poi_features: True
   poi_decomposer:
@@ -87,7 +87,7 @@ fe:
         use_columns: ["d", "t", "x", "y", "t_label", "weekend", "dayofweek"],
       } # + poi features
 
-  regression_target_transform: mean_diff
+  regression_target_transform: log
   scaling:
     type: StandardScaler
 
@@ -101,11 +101,11 @@ cv:
     random_state: "@/global/seed"
 
 nn:
-  out_dir: "005/models"
+  out_dir: "002/models"
   device: ???
   padding_value: -999
   max_epochs: 6
-  gradient_accumulation_steps: 32
+  gradient_accumulation_steps: 2
   clip_grad_norm: 1
   fp16: True
   batch_scheduler: True
@@ -118,13 +118,15 @@ nn:
     target_names: ["x", "y"]
 
   model:
-    type: CustomLSTMModelV1
-    input_size1: ???
-    input_size2: ???
-    hidden_size: 512
-    num_layers: 2
-    dropout: 0
+    type: CustomTransformerModelV1
+    input_size_src: ???
+    input_size_tgt: ???
+    d_model: 64
     output_size: ???
+    nhead: 4
+    num_encoder_layers: 2
+    num_decoder_layers: 4
+    dropout: 0.1
 
   criterion:
     type: SeqMSELoss
@@ -132,7 +134,7 @@ nn:
   metrics:
     type: RMSEGeobleuMetric
     processes: 4
-    sample_size: 250
+    sample_size: 20
     seed: "@/global/seed"
 
   dataset:
