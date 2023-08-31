@@ -5,7 +5,7 @@ global:
   resources: "/workspace/resources"
 
 fe:
-  out_dir: "004/features"
+  out_dir: "005/features"
   overwrite: False
   dataset: "task1_dataset"
   n_train_uid: 10000
@@ -87,7 +87,7 @@ fe:
         use_columns: ["d", "t", "x", "y", "t_label", "weekend", "dayofweek"],
       } # + poi features
 
-  regression_target_transform: z_score
+  regression_target_transform: mean_diff
   scaling:
     type: StandardScaler
 
@@ -101,7 +101,7 @@ cv:
     random_state: "@/global/seed"
 
 nn:
-  out_dir: "004/models"
+  out_dir: "005/models"
   device: ???
   padding_value: -999
   max_epochs: 6
