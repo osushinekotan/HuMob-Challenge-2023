@@ -5,11 +5,16 @@ from torch.nn.utils.rnn import pad_sequence
 from tqdm import tqdm
 
 
+def expand_mask_to_match_tensor(mask, tensor):
+    return mask.unsqueeze(-1).expand_as(tensor)
+
+
 class PadSequenceCollateFn:
     def __init__(self, is_train_mode=True, padding_value=-1, return_padding_mask=False):
         self.is_train_mode = is_train_mode
         self.padding_value = padding_value
         self.return_padding_mask = return_padding_mask
+        self.padding_value_for_pad = -9999
 
     def __call__(self, batch):
         feature_seqs = [item["feature_seqs"] for item in batch]
@@ -20,12 +25,12 @@ class PadSequenceCollateFn:
         feature_seqs_padded = pad_sequence(
             [(seq) for seq in feature_seqs],
             batch_first=True,
-            padding_value=self.padding_value,
+            padding_value=self.padding_value_for_pad,
         )  # (sequence_len, feature_dim)
         auxiliary_seqs_padded = pad_sequence(
             [(seq) for seq in auxiliary_seqs],
             batch_first=True,
-            padding_value=self.padding_value,
+            padding_value=self.padding_value_for_pad,
         )  # (sequence_len, feature_dim)
 
         if not self.is_train_mode:
@@ -39,17 +44,23 @@ class PadSequenceCollateFn:
                 batch = {
                     **batch,
                     **{
-                        "feature_padding_mask": (feature_seqs_padded[:, :, 0] == self.padding_value).bool(),
-                        "auxiliary_padding_mask": (auxiliary_seqs_padded[:, :, 0] == self.padding_value).bool(),
+                        "feature_padding_mask": (feature_seqs_padded[:, :, 0] == self.padding_value_for_pad).bool(),
+                        "auxiliary_padding_mask": (auxiliary_seqs_padded[:, :, 0] == self.padding_value_for_pad).bool(),
                     },
                 }
+                batch["feature_seqs"][
+                    expand_mask_to_match_tensor(batch["feature_padding_mask"], batch["feature_seqs"])
+                ] = self.padding_value
+                batch["auxiliary_seqs"][
+                    expand_mask_to_match_tensor(batch["auxiliary_padding_mask"], batch["auxiliary_seqs"])
+                ] = self.padding_value
             return batch
 
         target_seqs = [item["target_seqs"] for item in batch]
         target_seqs_padded = pad_sequence(
             [(seq) for seq in target_seqs],
             batch_first=True,
-            padding_value=self.padding_value,
+            padding_value=self.padding_value_for_pad,
         )  # (sequence_len, target_dim)
 
         batch = {
@@ -63,10 +74,16 @@ class PadSequenceCollateFn:
             batch = {
                 **batch,
                 **{
-                    "feature_padding_mask": (feature_seqs_padded[:, :, 0] == self.padding_value).bool(),
-                    "auxiliary_padding_mask": (auxiliary_seqs_padded[:, :, 0] == self.padding_value).bool(),
+                    "feature_padding_mask": (feature_seqs_padded[:, :, 0] == self.padding_value_for_pad).bool(),
+                    "auxiliary_padding_mask": (auxiliary_seqs_padded[:, :, 0] == self.padding_value_for_pad).bool(),
                 },
             }
+            batch["feature_seqs"][
+                expand_mask_to_match_tensor(batch["feature_padding_mask"], batch["feature_seqs"])
+            ] = self.padding_value
+            batch["auxiliary_seqs"][
+                expand_mask_to_match_tensor(batch["auxiliary_padding_mask"], batch["auxiliary_seqs"])
+            ] = self.padding_value
         return batch
 
 
