@@ -118,17 +118,18 @@ nn:
     target_names: ["x", "y"]
 
   model:
-    type: CustomTransformer1DCNNV1
-    input_size_src: ???
-    input_size_tgt: ???
-    d_model: 64
+    type: CustomLSTMTransformerV1
+    input_size1: ???
+    input_size2: ???
     output_size: ???
+    hidden_size: 2
+    dropout_lstm: 0
+    num_layers_lstm: 1
+    d_model: 128
     nhead: 4
-    num_encoder_layers: 2
-    num_decoder_layers: 4
-    dropout: 0.1
-    num_channels_cnn: [8, 8]
-    kernel_size_cnn: 3
+    num_encoder_layers: 4
+    num_decoder_layers: 2
+    dropout_transfomer: 0.1
 
   criterion:
     type: SeqMSELoss

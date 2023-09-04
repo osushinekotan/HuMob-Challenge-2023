@@ -367,3 +367,93 @@ class CustomLSTMModelV1WithAttention(nn.Module):
         x = self.out(outputs)
 
         return x
+
+
+# =======================================
+# LSTM + Transformer
+# =======================================
+class CustomLSTMTransformerV1(nn.Module):
+    def __init__(
+        self,
+        input_size1,
+        input_size2,
+        hidden_size,
+        dropout_lstm,
+        num_layers_lstm,
+        d_model,
+        output_size,
+        nhead=8,
+        num_encoder_layers=6,
+        num_decoder_layers=6,
+        dropout_transfomer=0.1,
+    ):
+        super().__init__()
+        """Oneshot sequence prediction model"""
+
+        self.lstm_encoder = nn.LSTM(
+            input_size1,
+            hidden_size,
+            num_layers=num_layers_lstm,
+            dropout=dropout_lstm,
+            batch_first=True,
+            bidirectional=True,
+        )
+        self.lstm_decoder = nn.LSTM(
+            input_size2,
+            hidden_size,
+            num_layers=num_layers_lstm,
+            dropout=dropout_lstm,
+            batch_first=True,
+            bidirectional=True,
+        )
+
+        self.embedding_src = nn.Sequential(
+            nn.Linear(hidden_size * 2, d_model),
+            nn.LayerNorm(d_model),
+            nn.ReLU(),
+            nn.Dropout(dropout_transfomer),
+        )
+        self.embedding_tgt = nn.Sequential(
+            nn.Linear(hidden_size * 2, d_model),
+            nn.LayerNorm(d_model),
+            nn.ReLU(),
+            nn.Dropout(dropout_transfomer),
+        )
+
+        # Encoder
+        encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, batch_first=True)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_encoder_layers)
+
+        # Decoder
+        decoder_layer = nn.TransformerDecoderLayer(d_model, nhead, batch_first=True)
+        self.decoder = nn.TransformerDecoder(decoder_layer, num_decoder_layers)
+
+        self.out = nn.Linear(d_model, output_size)
+
+    def forward(self, batch):
+        s1 = pack_padded_sequence(
+            batch["feature_seqs"],
+            batch["feature_lengths"],
+            batch_first=True,
+            enforce_sorted=False,
+        )
+        s2 = pack_padded_sequence(
+            batch["auxiliary_seqs"],
+            batch["auxiliary_lengths"],
+            batch_first=True,
+            enforce_sorted=False,
+        )
+        x1, (hn_1, cn_1) = self.lstm_encoder(s1)
+        x2, _ = self.lstm_decoder(s2, (hn_1, cn_1))
+
+        x1, _ = pad_packed_sequence(x1, batch_first=True)  # to fixible length
+        x2, _ = pad_packed_sequence(x2, batch_first=True)
+
+        x1 = self.embedding_src(x1)
+        x2 = self.embedding_tgt(x2)
+
+        encoder_output = self.encoder(x1)
+        decoder_output = self.decoder(tgt=x2, memory=encoder_output)
+
+        x = self.out(decoder_output)
+        return x

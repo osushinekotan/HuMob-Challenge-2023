@@ -12,6 +12,7 @@ from custom.metrics import GeobleuMetric, MSEMetric, RMSEGeobleuMetric, SeqMSELo
 from custom.model import (
     CustomLSTMModelV1,
     CustomLSTMModelV1WithAttention,
+    CustomLSTMTransformerV1,
     CustomTransformer1DCNNV1,
     CustomTransformerLSTMV1,
     CustomTransformerModelV1,
@@ -52,6 +53,7 @@ CONFIG_TYPES = dict(
     CustomLSTMModelV1WithAttention=CustomLSTMModelV1WithAttention,
     CustomTransformerLSTMV1=CustomTransformerLSTMV1,
     CustomTransformer1DCNNV1=CustomTransformer1DCNNV1,
+    CustomLSTMTransformerV1=CustomLSTMTransformerV1,
     # optimizer
     AdamW=AdamW,
     # scheduler
