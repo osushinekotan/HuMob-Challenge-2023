@@ -118,7 +118,7 @@ nn:
     target_names: ["x", "y"]
 
   model:
-    type: CustomTransformerModelV1
+    type: CustomTransformer1DCNNV1
     input_size_src: ???
     input_size_tgt: ???
     d_model: 64
@@ -127,6 +127,8 @@ nn:
     num_encoder_layers: 2
     num_decoder_layers: 4
     dropout: 0.1
+    num_channels_cnn: [8, 8]
+    kernel_size_cnn: 3
 
   criterion:
     type: SeqMSELoss

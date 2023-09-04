@@ -8,6 +8,9 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 warnings.filterwarnings("ignore", "Lazy modules are a new feature under heavy development.*")
 
 
+# =======================================
+# LSTM
+# =======================================
 class CustomLSTMModelV1(nn.Module):
     def __init__(
         self,
@@ -64,6 +67,9 @@ class CustomLSTMModelV1(nn.Module):
         return x
 
 
+# =======================================
+# Transformer
+# =======================================
 class CustomTransformerModelV1(nn.Module):
     def __init__(
         self,
@@ -82,14 +88,14 @@ class CustomTransformerModelV1(nn.Module):
         self.embedding_src = nn.Sequential(
             nn.Linear(input_size_src, d_model),
             nn.LayerNorm(d_model),
-            nn.ReLU(),  
-            nn.Dropout(dropout), 
+            nn.ReLU(),
+            nn.Dropout(dropout),
         )
         self.embedding_tgt = nn.Sequential(
             nn.Linear(input_size_tgt, d_model),
-            nn.LayerNorm(d_model), 
-            nn.ReLU(), 
-            nn.Dropout(dropout), 
+            nn.LayerNorm(d_model),
+            nn.ReLU(),
+            nn.Dropout(dropout),
         )
 
         # Encoder
@@ -113,6 +119,161 @@ class CustomTransformerModelV1(nn.Module):
         decoder_output = self.decoder(tgt=x_tgt, memory=encoder_output, tgt_key_padding_mask=tgt_mask)
 
         x = self.out(decoder_output)
+
+        return x
+
+
+# =======================================
+# Transformer + LSTM
+# =======================================
+class CustomTransformerLSTMV1(nn.Module):
+    def __init__(
+        self,
+        input_size_src,
+        input_size_tgt,
+        d_model,
+        output_size,
+        nhead=8,
+        num_encoder_layers=6,
+        num_decoder_layers=6,
+        dropout=0.1,
+        hidden_size_lstm=512,
+        num_layers_lstm=1,
+        dropout_lstm=0,
+    ):
+        super().__init__()
+        """Oneshot sequence prediction model"""
+
+        self.embedding_src = nn.Sequential(
+            nn.Linear(input_size_src, d_model),
+            nn.LayerNorm(d_model),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+        )
+        self.embedding_tgt = nn.Sequential(
+            nn.Linear(input_size_tgt, d_model),
+            nn.LayerNorm(d_model),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+        )
+
+        # Encoder
+        encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, batch_first=True)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_encoder_layers)
+
+        # Decoder
+        decoder_layer = nn.TransformerDecoderLayer(d_model, nhead, batch_first=True)
+        self.decoder = nn.TransformerDecoder(decoder_layer, num_decoder_layers)
+
+        self.lstm_encoder = nn.LSTM(
+            d_model,
+            hidden_size_lstm,
+            num_layers=num_layers_lstm,
+            dropout=dropout_lstm,
+            batch_first=True,
+            bidirectional=True,
+        )
+        self.lstm_decoder = nn.LSTM(
+            d_model,
+            hidden_size_lstm,
+            num_layers=num_layers_lstm,
+            dropout=dropout_lstm,
+            batch_first=True,
+            bidirectional=True,
+        )
+
+        self.out = nn.Linear(hidden_size_lstm * 2, output_size)
+
+    def forward(self, batch):
+        x_src = self.embedding_src(batch["feature_seqs"])
+        x_tgt = self.embedding_tgt(batch["auxiliary_seqs"])
+
+        src_mask = batch["feature_padding_mask"]
+        tgt_mask = batch["auxiliary_padding_mask"]
+
+        encoder_output = self.encoder(x_src, src_key_padding_mask=src_mask)
+        decoder_output = self.decoder(tgt=x_tgt, memory=encoder_output, tgt_key_padding_mask=tgt_mask)
+
+        _, (hn_1, cn_1) = self.lstm_encoder(encoder_output)
+        x, _ = self.lstm_decoder(decoder_output, (hn_1, cn_1))
+
+        x = self.out(x)
+        return x
+
+
+# =======================================
+# Transformer + １DCNN
+# =======================================
+class CustomTransformer1DCNNV1(nn.Module):
+    def __init__(
+        self,
+        input_size_src,
+        input_size_tgt,
+        d_model,
+        output_size,
+        nhead=8,
+        num_encoder_layers=6,
+        num_decoder_layers=6,
+        dropout=0.1,
+        num_channels_cnn=[256, 512],  # 1D CNNのチャンネル数
+        kernel_size_cnn=3,  # 1D CNNのカーネルサイズ
+    ):
+        super().__init__()
+        """Oneshot sequence prediction model"""
+
+        self.embedding_src = nn.Sequential(
+            nn.Linear(input_size_src, d_model),
+            nn.LayerNorm(d_model),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+        )
+        self.embedding_tgt = nn.Sequential(
+            nn.Linear(input_size_tgt, d_model),
+            nn.LayerNorm(d_model),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+        )
+
+        # Encoder
+        encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, batch_first=True)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_encoder_layers)
+
+        # Decoder
+        decoder_layer = nn.TransformerDecoderLayer(d_model, nhead, batch_first=True)
+        self.decoder = nn.TransformerDecoder(decoder_layer, num_decoder_layers)
+
+        # 1D CNN layers
+        cnn_layers = []
+        input_channels = d_model
+        for output_channels in num_channels_cnn:
+            cnn_layers.extend(
+                [
+                    nn.Conv1d(input_channels, output_channels, kernel_size_cnn, padding=kernel_size_cnn // 2),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                ]
+            )
+            input_channels = output_channels
+        self.cnn = nn.Sequential(*cnn_layers)
+
+        self.out = nn.Linear(input_channels, output_size)
+
+    def forward(self, batch):
+        x_src = self.embedding_src(batch["feature_seqs"])
+        x_tgt = self.embedding_tgt(batch["auxiliary_seqs"])
+
+        src_mask = batch["feature_padding_mask"]
+        tgt_mask = batch["auxiliary_padding_mask"]
+
+        encoder_output = self.encoder(x_src, src_key_padding_mask=src_mask)
+        decoder_output = self.decoder(tgt=x_tgt, memory=encoder_output, tgt_key_padding_mask=tgt_mask)
+
+        # 1D CNNによる処理
+        # 注意：Conv1dは(N, C, L)の形式を期待しているので、次元を入れ替える必要があります
+        cnn_out = self.cnn(decoder_output.permute(0, 2, 1))
+        cnn_out = cnn_out.permute(0, 2, 1)
+
+        x = self.out(cnn_out)
 
         return x
 

@@ -1,0 +1,47 @@
+nn:
+  CustomLSTMModelV1:
+    type: CustomLSTMModelV1
+    input_size1: ???
+    input_size2: ???
+    hidden_size: 2
+    num_layers: 2
+    dropout: 0.1
+    output_size: ???
+
+  CustomTransformerModelV1:
+    type: CustomTransformerModelV1
+    input_size_src: ???
+    input_size_tgt: ???
+    d_model: 64
+    output_size: ???
+    nhead: 4
+    num_encoder_layers: 2
+    num_decoder_layers: 4
+    dropout: 0.1
+
+  CustomTransformerLSTMV1:
+    type: CustomTransformerLSTMV1
+    input_size_src: ???
+    input_size_tgt: ???
+    d_model: 64
+    output_size: ???
+    nhead: 4
+    num_encoder_layers: 2
+    num_decoder_layers: 4
+    dropout: 0.1
+    hidden_size_lstm: 2
+    num_layers_lstm: 2
+    dropout_lstm: 0.1
+
+  CustomTransformer1DCNNV1:
+    type: CustomTransformer1DCNNV1
+    input_size_src: ???
+    input_size_tgt: ???
+    d_model: 64
+    output_size: ???
+    nhead: 4
+    num_encoder_layers: 2
+    num_decoder_layers: 4
+    dropout: 0.1
+    num_channels_cnn: [8, 8]
+    kernel_size_cnn: 3
