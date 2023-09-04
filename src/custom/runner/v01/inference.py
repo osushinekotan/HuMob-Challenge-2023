@@ -36,13 +36,13 @@ def make_sequences(df: pd.DataFrame, group_key: str, group_values: list[str]) ->
 
 def set_model_config(pre_eval_config: dict, feature_names, auxiliary_names):
     # model
-    if pre_eval_config["nn"]["model"]["type"].startswith("CustomLSTMModel"):
+    if pre_eval_config["nn"]["model"]["type"].startswith("CustomLSTM"):
         pre_eval_config["nn"]["model"]["input_size1"] = len(feature_names)
         pre_eval_config["nn"]["model"]["input_size2"] = len(auxiliary_names)
         pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
         return pre_eval_config
 
-    elif pre_eval_config["nn"]["model"]["type"].startswith("CustomTransformerModel"):
+    elif pre_eval_config["nn"]["model"]["type"].startswith("CustomTransformer"):
         pre_eval_config["nn"]["model"]["input_size_src"] = len(feature_names)
         pre_eval_config["nn"]["model"]["input_size_tgt"] = len(auxiliary_names)
         pre_eval_config["nn"]["model"]["output_size"] = len(pre_eval_config["nn"]["feature"]["target_names"])
