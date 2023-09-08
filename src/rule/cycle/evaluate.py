@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from imputer import CycleImputer
 from sklearn.metrics import mean_squared_error
@@ -11,9 +12,12 @@ def sampling(df, n, seed=0):
     return df[df["uid"].isin(uids)].reset_index(drop=True)
 
 
-def assign_day_of_week(df):
+def assign_day_of_week(df, task=1):
     df["dayofweek"] = (df["d"] % 7).astype(int)
     df["weekend"] = df["dayofweek"].isin([6, 0])
+
+    if task == 1:
+        df["weekend"] = np.array(df["weekend"] + df["d"].isin([37, 36]), dtype=bool)  # + holoday
     return df
 
 
@@ -26,15 +30,16 @@ def assign_t_labe(df):
 
 
 def assign_detailed_t_label(df):
-    division = 48 // 12  # 48を12で割った値
+    division = 48 // 24
     result_dict = {i: i // division for i in range(48)}
     df["detailed_t_label"] = df["t"].map(result_dict)
     return df
 
 
-def preprocess(df):
+def preprocess(df, task):
+    task = 1 if task == "task1_dataset" else 0
     assign_funcs = [
-        assign_day_of_week,
+        lambda x: assign_day_of_week(x, task=task),
         assign_t_labe,
         assign_detailed_t_label,
     ]
@@ -67,8 +72,8 @@ def calc_metrics(reference, generated, max_eval=100):
         a_generated = generated.loc[generated["uid"] == uid, ["d", "t", "x", "y"]].values.tolist()
         a_reference = reference.loc[reference["uid"] == uid, ["d", "t", "x", "y"]].values.tolist()
 
-        geobleu_score += geobleu.calc_geobleu(a_generated, a_reference, processes=7)
-        dtw_score += geobleu.calc_dtw(a_generated, a_reference, processes=7)
+        geobleu_score += geobleu.calc_geobleu(a_generated, a_reference, processes=4)
+        dtw_score += geobleu.calc_dtw(a_generated, a_reference, processes=4)
 
     geobleu_score = geobleu_score / len(eval_uids)
     dtw_score = dtw_score / len(eval_uids)
@@ -87,7 +92,7 @@ def main(task_dataset, eval_uid_num, group_keys, agg_method, cycle_groups, T, se
 
     df = pd.read_parquet(filepath)
     df = sampling(df=df, n=eval_uid_num, seed=seed)
-    df = preprocess(df)
+    df = preprocess(df, task=task_dataset)
 
     imputer = CycleImputer(group_keys=group_keys, agg_method=agg_method)
     filled_df = imputer.impute(df=df, cycle_groups=cycle_groups, T=T)
@@ -101,12 +106,15 @@ def main(task_dataset, eval_uid_num, group_keys, agg_method, cycle_groups, T, se
 if __name__ == "__main__":
     # TODO : make config file
     task_dataset = "task1_dataset"
-    eval_uid_num = 1000
-    seed = 0
-    group_keys = ["uid", "dayofweek", "t_label", "t"]
+    eval_uid_num = 2000
+    seed = 8823
+    group_keys = ["uid", "weekend", "t", "t_label"]
     agg_method = "median"
-    cycle_groups = [["uid", "dayofweek"]]
-    T = 24
+    cycle_groups = [
+        ["uid", "weekend", "t_label"],
+        ["uid", "t_label"],
+    ]
+    T = 6
 
     main(
         task_dataset=task_dataset,
