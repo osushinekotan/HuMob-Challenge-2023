@@ -67,8 +67,8 @@ def calc_metrics(reference, generated, max_eval=100):
         a_generated = generated.loc[generated["uid"] == uid, ["d", "t", "x", "y"]].values.tolist()
         a_reference = reference.loc[reference["uid"] == uid, ["d", "t", "x", "y"]].values.tolist()
 
-        geobleu_score += geobleu.calc_geobleu(a_generated, a_reference, processes=3)
-        dtw_score += geobleu.calc_dtw(a_generated, a_reference, processes=3)
+        geobleu_score += geobleu.calc_geobleu(a_generated, a_reference, processes=7)
+        dtw_score += geobleu.calc_dtw(a_generated, a_reference, processes=7)
 
     geobleu_score = geobleu_score / len(eval_uids)
     dtw_score = dtw_score / len(eval_uids)
