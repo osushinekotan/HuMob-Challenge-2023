@@ -3,6 +3,7 @@ global:
   seed: 8823
   resources: "/workspace/resources"
 cycle:
+  name: cycle_000
   task_dataset: "task2_dataset"
   group_keys: ["uid", "weekend", "t", "t_label"]
   agg_method: "median"
