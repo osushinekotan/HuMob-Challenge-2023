@@ -89,35 +89,33 @@ def calc_metrics(reference, generated, max_eval=100):
     return scores
 
 
-def get_score(task_dataset, eval_uid_num, group_keys, agg_method, cycle_groups, T, seed):
-    filepath = f"/workspace/resources/input/{task_dataset}_raw_train.parquet"
-
-    df = pd.read_parquet(filepath)
-    df = sampling(df=df, n=eval_uid_num, seed=seed)
+def make_preds_df(df, imputer, task_dataset, cycle_groups, T):
     df = preprocess(df, task=task_dataset)
-
-    imputer = CycleImputer(group_keys=group_keys, agg_method=agg_method)
     filled_df = imputer.impute(df=df, cycle_groups=cycle_groups, T=T)
-
     preds_df = make_valid_df(imputer=imputer, raw_df=df, filled_df=filled_df)
-    reference, generated = make_eval_inputs(imputer, preds_df)
-    scores = calc_metrics(reference, generated, max_eval=eval_uid_num)
-    print(scores)
+    return preds_df
 
 
 def run():
     config = load_yaml("/workspace/src/conf/rule.yaml")
     config = Config(config=config)
+    task_dataset = config["cycle/task_dataset"]
 
-    get_score(
+    filepath = f"/workspace/resources/input/{task_dataset}_raw_train.parquet"
+
+    df = pd.read_parquet(filepath)
+    df = sampling(df=df, n=config["cycle/eval/eval_uid_num"], seed=config["global/seed"])
+    imputer = CycleImputer(group_keys=config["cycle/group_keys"], agg_method=config["cycle/agg_method"])
+    preds_df = make_preds_df(
+        df,
+        imputer=imputer,
         task_dataset=config["cycle/task_dataset"],
-        eval_uid_num=config["cycle/eval/eval_uid_num"],
-        group_keys=config["cycle/group_keys"],
-        agg_method=config["cycle/agg_method"],
         cycle_groups=config["cycle/cycle_groups"],
         T=config["cycle/T"],
-        seed=config["global/seed"],
     )
+    reference, generated = make_eval_inputs(imputer, preds_df)
+    scores = calc_metrics(reference, generated, max_eval=config["cycle/eval/eval_uid_num"])
+    print(scores)
 
 
 if __name__ == "__main__":
