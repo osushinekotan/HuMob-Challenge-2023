@@ -1,2 +1,2 @@
 cd /workspace/
-poetry run python src/main.py
+poetry run python src/custom.py

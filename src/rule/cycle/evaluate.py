@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
-from imputer import CycleImputer
+from pytorch_pfn_extras.config import Config
+from rule.cycle.imputer import CycleImputer
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
+from util import load_yaml
 
 import geobleu
 
@@ -30,7 +32,7 @@ def assign_t_labe(df):
 
 
 def assign_detailed_t_label(df):
-    division = 48 // 24
+    division = 48 // 12
     result_dict = {i: i // division for i in range(48)}
     df["detailed_t_label"] = df["t"].map(result_dict)
     return df
@@ -87,7 +89,7 @@ def calc_metrics(reference, generated, max_eval=100):
     return scores
 
 
-def main(task_dataset, eval_uid_num, group_keys, agg_method, cycle_groups, T, seed):
+def get_score(task_dataset, eval_uid_num, group_keys, agg_method, cycle_groups, T, seed):
     filepath = f"/workspace/resources/input/{task_dataset}_raw_train.parquet"
 
     df = pd.read_parquet(filepath)
@@ -103,25 +105,20 @@ def main(task_dataset, eval_uid_num, group_keys, agg_method, cycle_groups, T, se
     print(scores)
 
 
-if __name__ == "__main__":
-    # TODO : make config file
-    task_dataset = "task1_dataset"
-    eval_uid_num = 2000
-    seed = 8823
-    group_keys = ["uid", "weekend", "t", "t_label"]
-    agg_method = "median"
-    cycle_groups = [
-        ["uid", "weekend", "t_label"],
-        ["uid", "t_label"],
-    ]
-    T = 6
+def run():
+    config = load_yaml("/workspace/src/conf/rule.yaml")
+    config = Config(config=config)
 
-    main(
-        task_dataset=task_dataset,
-        eval_uid_num=eval_uid_num,
-        group_keys=group_keys,
-        agg_method=agg_method,
-        cycle_groups=cycle_groups,
-        T=T,
-        seed=seed,
+    get_score(
+        task_dataset=config["cycle/task_dataset"],
+        eval_uid_num=config["cycle/eval/eval_uid_num"],
+        group_keys=config["cycle/group_keys"],
+        agg_method=config["cycle/agg_method"],
+        cycle_groups=config["cycle/cycle_groups"],
+        T=config["cycle/T"],
+        seed=config["global/seed"],
     )
+
+
+if __name__ == "__main__":
+    run()
