@@ -11,7 +11,7 @@ from custom.helper import inference_fn
 from custom.runner.v01.train import get_auxiliary_names, retransform_regression_target
 from logger import Logger
 from pytorch_pfn_extras.config import Config
-from util import load_yaml, seed_everything
+from util import seed_everything
 
 logger = Logger(name="inference")
 
@@ -134,8 +134,7 @@ def inference_fold(pre_eval_config: dict, df: pd.DataFrame, out_dir: Path) -> No
     return mean_outputs
 
 
-def run():
-    pre_eval_config = load_yaml()
+def run(pre_eval_config):
     seed_everything(pre_eval_config["global"]["seed"])
     out_dir = (
         Path(pre_eval_config["global"]["resources"])
@@ -150,7 +149,3 @@ def run():
 
     logger.debug(f"shape : {test_outputs.shape}")
     joblib.dump(test_outputs, out_dir / "test_outputs.pkl")
-
-
-if __name__ == "__main__":
-    run()

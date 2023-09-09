@@ -3,14 +3,11 @@ from pathlib import Path
 import joblib
 import pandas as pd
 from logger import Logger
-from util import load_yaml
 
 logger = Logger(name="make_submission")
 
 
-def run():
-    pre_eval_config = load_yaml()
-
+def run(pre_eval_config):
     out_dir = Path(pre_eval_config["global"]["resources"]) / "output"
 
     test_predictions = joblib.load(
@@ -43,8 +40,3 @@ def run():
         compression="gzip",
         index=None,
     )
-
-
-if __name__ == "__main__":
-    with logger.time_log():
-        run()

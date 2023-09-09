@@ -4,7 +4,6 @@ from pytorch_pfn_extras.config import Config
 from rule.cycle.imputer import CycleImputer
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
-from util import load_yaml
 
 import geobleu
 
@@ -96,9 +95,8 @@ def make_preds_df(df, imputer, task_dataset, cycle_groups, T):
     return preds_df
 
 
-def run():
-    config = load_yaml("/workspace/src/conf/rule.yaml")
-    config = Config(config=config)
+def run(pre_eval_config):
+    config = Config(config=pre_eval_config)
     task_dataset = config["cycle/task_dataset"]
 
     filepath = f"/workspace/resources/input/{task_dataset}_raw_train.parquet"
@@ -116,7 +114,3 @@ def run():
     reference, generated = make_eval_inputs(imputer, preds_df)
     scores = calc_metrics(reference, generated, max_eval=config["cycle/eval/eval_uid_num"])
     print(scores)
-
-
-if __name__ == "__main__":
-    run()

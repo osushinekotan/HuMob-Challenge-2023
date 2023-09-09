@@ -10,11 +10,11 @@ import torch
 import yaml
 
 
-def load_yaml(filepath: Path = "/workspace/src/conf/custom.yaml") -> dict:
+def load_yaml(filepath: Path) -> dict:
     """load yaml as dict
 
     Args:
-        filepath (Path, optional): yaml filepath. Defaults to "/workspace/src/conf/custom.yaml", config file.
+        filepath (Path, optional): yaml filepath.
 
     Returns:
         dict: yaml as dict

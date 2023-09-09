@@ -13,7 +13,7 @@ from custom.config_types import CONFIG_TYPES
 from custom.helper import train_fn, valid_fn
 from logger import Logger
 from pytorch_pfn_extras.config import Config
-from util import load_yaml, seed_everything
+from util import seed_everything
 
 import wandb
 
@@ -324,8 +324,7 @@ def train_fold(pre_eval_config: dict, df: pd.DataFrame, out_dir: Path) -> None:
     return np.concatenate(oof_outputs, axis=0)
 
 
-def run() -> None:
-    pre_eval_config = load_yaml()
+def run(pre_eval_config) -> None:
     seed_everything(pre_eval_config["global"]["seed"])
     out_dir = (
         Path(pre_eval_config["global"]["resources"])
@@ -338,7 +337,3 @@ def run() -> None:
     with logger.time_log("train_fold"):
         oof_outputs = train_fold(pre_eval_config, df=feature_df, out_dir=out_dir)
     joblib.dump(oof_outputs, out_dir / "oof_outputs.pkl")
-
-
-if __name__ == "__main__":
-    run()

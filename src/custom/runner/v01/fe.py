@@ -14,7 +14,7 @@ from custom.util import sort_df_numpy
 from logger import Logger
 from pytorch_pfn_extras.config import Config
 from tqdm import tqdm
-from util import load_yaml, reduce_mem_usage
+from util import reduce_mem_usage
 
 logger = Logger(name="fe")
 
@@ -410,9 +410,8 @@ def post_make_features(df):
     return df
 
 
-def run() -> None:
+def run(pre_eval_config) -> None:
     # set config
-    pre_eval_config = load_yaml()
     config = Config(pre_eval_config, types=CONFIG_TYPES)
 
     # set const
@@ -555,7 +554,3 @@ def run() -> None:
     assert test_feature_df.loc[test_feature_df["d"] >= 60, "uid"].nunique() == test_feature_df["uid"].nunique()
     logger.debug(f"\nfeatures\n\n{train_feature_df}")
     logger.debug(f"\nxy\n\n{train_feature_df[['x', 'original_x', 'y', 'original_y']]}")
-
-
-if __name__ == "__main__":
-    run()
