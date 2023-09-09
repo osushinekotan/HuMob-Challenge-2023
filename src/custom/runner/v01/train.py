@@ -206,6 +206,12 @@ def retransform_regression_target(config: Config, outputs: np.ndarray, data=None
         outputs[outputs > 200] = 200
         return outputs.astype(int)
 
+    elif config["/fe/regression_target_transform"] == "robust_z_score":
+        assert len(data) == len(outputs)
+        outputs = (outputs * data[["x_std", "y_std"]].values) + data[["x_median", "y_median"]].values
+        outputs[outputs < 1] = 1
+        outputs[outputs > 200] = 200
+        return outputs.astype(int)
     else:
         raise NotImplementedError()
 

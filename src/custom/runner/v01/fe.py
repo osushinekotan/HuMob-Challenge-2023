@@ -327,6 +327,19 @@ def transform_regression_target(config: Config, df: pd.DataFrame, prefix: str) -
         logger.debug(df[["uid", "y", "y_mean", "original_y"]].head())
         return df
 
+    elif config["/fe/regression_target_transform"] == "robust_z_score":
+        mapping_df = make_xy_agg_mapping(config=config, df=df, prefix=prefix)
+        df = pd.merge(df, mapping_df[["uid", "x_median", "y_median", "x_std", "y_std"]], on="uid", how="left")
+        df.loc[target_mask, "x"] = (df.loc[target_mask, "x"] - df.loc[target_mask, "x_median"]) / df.loc[
+            target_mask, "x_std"
+        ]
+        df.loc[target_mask, "y"] = (df.loc[target_mask, "y"] - df.loc[target_mask, "y_median"]) / df.loc[
+            target_mask, "y_std"
+        ]
+
+        logger.debug(df[["uid", "x", "x_median", "original_x"]].head())
+        logger.debug(df[["uid", "y", "y_median", "original_y"]].head())
+        return df
     else:
         raise NotImplementedError()
 
@@ -353,45 +366,30 @@ def get_group_value(s):
     return None
 
 
-def fillna_grpby_uid(df, ignore_columns=["uid_weekend_t_label_2h"]):
+def fillna_grpby_uid(df, ignore_columns=[]):
     for col in df.columns:
-        ignore_flag = False
-        for ignore_col in ignore_columns:
-            if ignore_col in col:
-                ignore_flag = True
-
-        if ignore_flag:
+        if any(ignore in col for ignore in ignore_columns):
             continue
 
         if "_grpby_uid_" not in col:
             continue
+
         agg_method = get_agg_method(col)
         group_val = get_group_value(col)
 
         if agg_method is None:
             continue
 
-        nan_uids = df.loc[df[col].isna(), "uid"].unique()
-        if len(nan_uids) == 0:
-            continue
+        fill_values = df.groupby("uid")[group_val].transform(agg_method)
+        mask = df[col].isna()
+        df.loc[mask, col] = fill_values[mask]
 
-        logger.debug(f"fillna_grpby_uid : {col}")
-        for nan_uid in tqdm(nan_uids):
-            fill_value = df[df["uid"] == nan_uid][group_val].agg(agg_method)
-            df.loc[(df["uid"] == nan_uid).values & (df[col].isnull().values), col] = fill_value
     return df
 
 
 def post_make_features(df):
     # 変数名をリストとして定義
-    keys = [
-        "uid",
-        "uid_dayofweek",
-        "uid_t_label",
-        "uid_weekend",
-        # "uid_weekend_t_label",
-        # "uid_dayofweek_t_label",
-    ]
+    keys = ["uid", "uid_weekend_t", "uid_t"]
 
     # diff と z_score の計算
     for base_key in keys:

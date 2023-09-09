@@ -59,6 +59,9 @@ class GeobleuMetric:
             uids = np.random.choice(uids, self.sample_size, replace=False)
             logger.debug(f"sampling size : {self.sample_size}, uids : {uids[:5]}")
 
+            generated = generated[generated["uid"].isin(uids)].reset_index(drop=True)
+            reference = reference[reference["uid"].isin(uids)].reset_index(drop=True)
+
         n = len(uids)
         geobleu_score = 0
         dtw_score = 0

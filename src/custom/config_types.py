@@ -19,7 +19,7 @@ from custom.model import (
 )
 from sklearn.decomposition import NMF, PCA
 from sklearn.model_selection import StratifiedGroupKFold
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import RobustScaler, StandardScaler
 from torch import nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
@@ -29,6 +29,7 @@ CONFIG_TYPES = dict(
     method_call=lambda obj, method: getattr(obj, method)(),
     # scaler
     StandardScaler=StandardScaler,
+    RobustScaler=RobustScaler,
     # cv
     StratifiedGroupKFold=StratifiedGroupKFold,
     # feature extractor
