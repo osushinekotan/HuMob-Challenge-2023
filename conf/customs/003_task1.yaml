@@ -1,0 +1,190 @@
+global:
+  project: "HuMob-Challenge-2023"
+  seed: 8823
+  debug: False
+  resources: "/workspace/resources"
+
+fe:
+  out_dir: "003/features"
+  overwrite: True
+  dataset: "task1_dataset"
+  n_train_uid: 10000
+  use_poi_features: True
+  poi_decomposer:
+    type: NMF
+    n_components: 10
+    random_state: "@/global/seed"
+  cycles: [7]
+  extractors:
+    - {
+        type: GroupedDiffFeatureExtractor,
+        group_key: uid,
+        group_values: ["d", "x", "y", "cycle_07"],
+        intervals: [1, -1, 2, -2],
+      }
+    - {
+        type: GroupedDiffFeatureExtractor,
+        group_key: ["uid", "d"],
+        group_values: ["t"],
+        intervals: [1, -1, 2, -2],
+      }
+    - {
+        type: GroupedDiffFeatureExtractor,
+        group_key: ["uid", "dayofweek"],
+        group_values: ["x", "y"],
+        intervals: [1, -1, 2, -2],
+      }
+    - {
+        type: GroupedShiftFeatureExtractor,
+        group_key: uid,
+        group_values: ["d", "x", "y"],
+        intervals: [1, -1, 2, -2],
+      }
+    - {
+        type: GroupedShiftFeatureExtractor,
+        group_key: ["uid", "dayofweek"],
+        group_values: ["x", "y"],
+        intervals: [1, -1, 2, -2],
+      }
+    - {
+        type: D60MaskGroupedSimpleFeatureExtoractor,
+        group_key: ["uid"],
+        group_values: ["x", "y"],
+        agg_methods: ["min", "max", "mean", "median", "std"],
+      }
+    - {
+        type: D60MaskGroupedSimpleFeatureExtoractor,
+        group_key: ["uid", "t"],
+        group_values: ["x", "y"],
+        agg_methods: ["min", "max", "mean", "median", "std"],
+      }
+    - {
+        type: D60MaskGroupedSimpleFeatureExtoractor,
+        group_key: ["uid", "weekend", "t"],
+        group_values: ["x", "y"],
+        agg_methods: ["min", "max", "mean", "median", "std"],
+      }
+    - {
+        type: RawFeatureExtractor,
+        use_columns: ["d", "t", "x", "y", "t_label", "weekend", "dayofweek"],
+      } # + poi features
+
+  regression_target_transform: log
+  scaling:
+    type: RobustScaler
+
+cv:
+  num_fold: 5
+  valid_folds: [0]
+  strategy:
+    type: StratifiedGroupKFold
+    n_splits: "@/cv/num_fold"
+    shuffle: True
+    random_state: "@/global/seed"
+
+nn:
+  out_dir: "003/models"
+  device: ???
+  padding_value: 0
+  max_epochs: 12
+  gradient_accumulation_steps: 16
+  clip_grad_norm: 1
+  fp16: True
+  batch_scheduler: True
+  iters_per_epoch: ???
+  num_training_steps: ???
+
+  feature:
+    feature_names: ???
+    auxiliary_names: ??? # f_d_*, f_t_*, f_(x|y)_grpby_uid_.*_agg_.*
+    target_names: ["x", "y"]
+
+  model:
+    type: CustomLSTMModelV1
+    input_size1: ???
+    input_size2: ???
+    hidden_size: 1024
+    num_layers: 1
+    dropout: 0
+    output_size: ???
+
+  criterion:
+    type: SeqMSELoss
+
+  metrics:
+    type: RMSEGeobleuMetric
+    processes: 4
+    sample_size: 250
+    seed: "@/global/seed"
+
+  dataset:
+    train:
+      type: TrainDataset
+      feature_seqs: ???
+      auxiliary_seqs: ???
+      target_seqs: ???
+    valid:
+      type: TrainDataset
+      feature_seqs: ???
+      auxiliary_seqs: ???
+      target_seqs: ???
+    test:
+      type: TestDataset
+      feature_seqs: ???
+      auxiliary_seqs: ???
+
+  dataloader:
+    train:
+      type: DataLoader
+      dataset: "@/nn/dataset/train"
+      collate_fn:
+        type: PadSequenceCollateFn
+        is_train_mode: True
+        padding_value: "@/nn/padding_value"
+        return_padding_mask: True
+      batch_size: 8
+      num_workers: 2
+      shuffle: False
+      pin_memory: True
+      drop_last: True
+    valid:
+      type: DataLoader
+      dataset: "@/nn/dataset/valid"
+      collate_fn:
+        type: PadSequenceCollateFn
+        is_train_mode: True
+        padding_value: "@/nn/padding_value"
+        return_padding_mask: True
+      batch_size: 32
+      num_workers: 2
+      shuffle: False
+      pin_memory: True
+      drop_last: False
+    test:
+      type: DataLoader
+      dataset: "@/nn/dataset/test"
+      collate_fn:
+        type: PadSequenceCollateFn
+        is_train_mode: False
+        padding_value: "@/nn/padding_value"
+        return_padding_mask: True
+      batch_size: 32
+      num_workers: 2
+      shuffle: False
+      pin_memory: True
+      drop_last: False
+
+  optimizer:
+    type: AdamW
+    params: { type: method_call, obj: "@/nn/model", method: parameters }
+    lr: 5.0e-2
+    weight_decay: 0
+    eps: 1.0e-6
+    betas: [0.9, 0.999]
+
+  scheduler:
+    type: get_cosine_schedule_with_warmup
+    optimizer: "@/nn/optimizer"
+    num_warmup_steps: 0
+    num_training_steps: "@/nn/num_training_steps"
+    num_cycles: 0.5
