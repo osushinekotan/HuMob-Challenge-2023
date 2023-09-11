@@ -43,7 +43,7 @@ def run(pre_eval_config):
         process_batch(pd.concat(grouped[i * batch_size : (i + 1) * batch_size]).reset_index(drop=True), config)
         for i in tqdm(range(num_batches), desc="Processing batches")
     ]
-    generated = pd.concat(generated).reset_index(drop=True)
+    generated = pd.concat(generated).reset_index(drop=True).astype(int)
 
     print(generated)
 
