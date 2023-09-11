@@ -28,7 +28,8 @@ class CycleImputer:
         self.agg_df.reset_index(inplace=True)
 
     def make_base(self, df):
-        lists = [df[x].unique() for x in self.group_keys]
+        lists = [range(48) if x == "t" else df[x].unique() for x in self.group_keys]
+
         self.base_df = self.create_combinations_df(lists, columns=self.group_keys)
 
         if self.agg_df is None:

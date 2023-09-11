@@ -1,11 +1,14 @@
 import numpy as np
 import pandas as pd
+from pandarallel import pandarallel
 from pytorch_pfn_extras.config import Config
 from rule.cycle.imputer import CycleImputer
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
 
 import geobleu
+
+pandarallel.initialize(progress_bar=True, use_memory_fs=False)
 
 
 def sampling(df, n, seed=0):
@@ -14,8 +17,8 @@ def sampling(df, n, seed=0):
 
 
 def assign_day_of_week(df, task=1):
-    df["dayofweek"] = (df["d"] % 7).astype(int)
-    df["weekend"] = df["dayofweek"].isin([6, 0])
+    df["dayofweek"] = (df["d"] % 7).astype(int).values
+    df["weekend"] = df["dayofweek"].isin([6, 0]).values
 
     if task == 1:
         df["weekend"] = np.array(df["weekend"] + df["d"].isin([37, 36]), dtype=bool)  # + holoday
@@ -26,14 +29,14 @@ def assign_t_labe(df):
     morning = {k: 0 for k in list(range(12, 36))}
     midnight = {k: 1 for k in list(range(36, 48)) + list(range(0, 12))}
     t_label_mapping = {**morning, **midnight}
-    df["t_label"] = df["t"].map(t_label_mapping)
+    df["t_label"] = df["t"].map(t_label_mapping).values
     return df
 
 
 def assign_detailed_t_label(df):
     division = 48 // 12
     result_dict = {i: i // division for i in range(48)}
-    df["detailed_t_label"] = df["t"].map(result_dict)
+    df["detailed_t_label"] = df["t"].map(result_dict).values
     return df
 
 
