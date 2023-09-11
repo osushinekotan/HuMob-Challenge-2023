@@ -12,3 +12,5 @@ cycle:
   T: 6
   eval:
     eval_uid_num: 100
+  inference:
+    batch_size: 500
