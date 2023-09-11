@@ -1,0 +1,14 @@
+global:
+  project: "HuMob-Challenge-2023"
+  seed: 8823
+  resources: "/workspace/resources"
+cycle:
+  name: cycle_001
+  task_dataset: "task1_dataset"
+  group_keys: ["uid", "weekend", "t", "t_label"]
+  agg_method: "median"
+  cycle_groups:
+    [["uid", "t"], ["uid", "weekend", "t_label"], ["uid", "t_label"]]
+  T: 6
+  eval:
+    eval_uid_num: 1000

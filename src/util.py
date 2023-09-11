@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import torch
 import yaml
+from tqdm import tqdm
 
 
 def load_yaml(filepath: Path) -> dict:
@@ -50,17 +51,10 @@ def load_json(filepath: Path) -> dict:
 
 
 def reduce_mem_usage(df: pd.DataFrame, verbose: bool = False, ignore_columns: list = ["uid"]) -> pd.DataFrame:
-    if verbose:
-        cols = df.columns[df.columns.duplicated()]
-        if len(cols) == 0:
-            print("There are no duplicated columns")
-        else:
-            print(f"duplicated culumns are {df.columns[df.columns.duplicated()]}")
-    df = df.loc[:, ~df.columns.duplicated()]  # TODO : ダブってるカラムを見つける
     numerics = ["int16", "int32", "int64", "float16", "float32", "float64"]
     start_mem = df.memory_usage().sum() / 1024**2
     dfs = []
-    for col in df.columns:
+    for col in tqdm(df.columns):
         col_type = df[col].dtypes
         if col_type in numerics:
             if col in ignore_columns:
