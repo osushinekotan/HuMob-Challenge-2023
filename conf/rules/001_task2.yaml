@@ -4,12 +4,11 @@ global:
   resources: "/workspace/resources"
 cycle:
   name: cycle_001
-  task_dataset: "task1_dataset"
-  group_keys: ["uid", "weekend", "t", "t_label"]
+  task_dataset: "task2_dataset"
+  group_keys: ["uid", "weekend", "t"]
   agg_method: "median"
-  cycle_groups:
-    [["uid", "t"], ["uid", "weekend", "t_label"], ["uid", "t_label"]]
-  T: 6
+  cycle_groups: [["uid", "t"]]
+  T: 4
   eval:
     eval_uid_num: 1000
   inference:
